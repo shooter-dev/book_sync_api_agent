@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from app.services.predict_service import PredictService
 from app.models.predict_request import PredictRequest
 from app.models.predict_response import PredictResponse
@@ -11,28 +11,36 @@ router = APIRouter(
 predict_service = PredictService()
 
 
+@router.post("/test")
+async def predict_test(request: dict):
+    """Test endpoint pour débugger"""
+    return {"status": "ok", "received": request, "types": {k: str(type(v)) for k, v in request.items()}}
+
+@router.post("/raw", response_model=PredictResponse)
+async def predict_raw(request: Request):
+    """Test avec JSON brut"""
+    try:
+        import json
+        body = await request.body()
+        data = json.loads(body)
+        
+        return PredictResponse(
+            answer=f"Test réussi avec JSON brut! Collection: {list(data.get('collection', {}).keys())}",
+            thought_process=["JSON brut reçu", f"User: {data.get('user_age')}"],
+            enough_context=True,
+            sources_count=0,
+            avg_similarity=None
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erreur: {str(e)}")
+
 @router.post("/", response_model=PredictResponse)
 async def predict(request: PredictRequest):
     """
-    Endpoint pour effectuer des prédictions basées sur la recherche vectorielle.
+    Endpoint pour effectuer des prédictions et recommandations personnalisées.
     
-    Cette route permet de poser des questions sur le contenu des mangas/livres
-    et obtenir des réponses basées sur les données vectorisées en base.
-    
-    Args:
-        request: La requête contenant la question et les paramètres de recherche
-        
-    Returns:
-        PredictResponse: La réponse synthétisée avec les métadonnées
-        
-    Example:
-        ```json
-        {
-            "question": "Que se passe-t-il dans le volume 1 de 008 Apprenti espion?",
-            "limit": 5,
-            "metadata_filter": {"serie_title": "008 Apprenti espion"}
-        }
-        ```
+    Cette route utilise le profil utilisateur pour générer des recommandations
+    intelligentes ou répondre à des questions spécifiques sur les mangas/livres.
     """
     try:
         response = await predict_service.predict(request)

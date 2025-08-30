@@ -9,7 +9,7 @@ from app.database.vector_store import VectorStore
 vec = VectorStore()
 
 # Lire le fichier CSV
-df = pd.read_csv("/Users/shooterdev/Lab/PycharmProjects/Simplon/pgvectorscale-rag-solution/data/volume_content.csv", sep=";")
+df = pd.read_csv("data/volume_content.csv", sep=";")
 
 # Variable pour suivre le progrès
 total_rows = len(df)
