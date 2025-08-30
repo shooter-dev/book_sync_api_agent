@@ -19,4 +19,4 @@ COPY . .
 EXPOSE 3000
 
 # Lancer l'app FastAPI
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "${CONTAINER_APP_PORT}"]
+CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${CONTAINER_APP_PORT}"]
