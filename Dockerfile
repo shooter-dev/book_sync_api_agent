@@ -1,18 +1,22 @@
-FROM python:3.12-slim
+# Dockerfile pour l'application Django BookSync
+FROM python:3.12-alpine
 
-WORKDIR /code
+# Variables d'environnement
+ENV PYTHONUNBUFFERED=1
 
-# Copier les fichiers de dépendances et installer
-COPY ./requirements.txt ./code
+RUN apk add --no-cache gcc musl-dev postgresql-dev
+
+WORKDIR /app
+
+COPY requirements.txt .
+
 RUN pip install --no-cache-dir --upgrade -r requirements.txt
 
 # Copier le code source
-COPY ./app ./code/app
-
-ENV PYTHONPATH=/app
+COPY . .
 
 # Exposer le port
-EXPOSE 80
+EXPOSE 3000
 
 # Lancer l'app FastAPI
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "80"]
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "${CONTAINER_APP_PORT}"]
