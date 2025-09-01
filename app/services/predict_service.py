@@ -229,10 +229,23 @@ class PredictService:
             # Effectuer une recherche vectorielle adaptée au contexte utilisateur
             search_results = self._perform_contextual_search(request, generated_question, metadata_filter)
             
+            # Préparer le profil utilisateur
+            user_profile = {
+                'user_age': request.user_age,
+                'user_genre': request.user_genre,
+                'genre_preference': request.genre_preference,
+                'category_preference': request.category_preference,
+                'user_mood': request.user_mood,
+                'prediction_type': request.prediction_type,
+                'collection': request.collection,
+                'read': request.read
+            }
+            
             # Générer la réponse synthétisée
             synthesizer_response = self.synthesizer.generate_response(
                 question=generated_question,
-                context=search_results
+                context=search_results,
+                user_profile=user_profile
             )
             
             # Calculer les métadonnées

@@ -42,6 +42,8 @@ async def predict(request: PredictRequest):
     Cette route utilise le profil utilisateur pour générer des recommandations
     intelligentes ou répondre à des questions spécifiques sur les mangas/livres.
     """
+
+    print("dd")
     try:
         response = await predict_service.predict(request)
         return response
