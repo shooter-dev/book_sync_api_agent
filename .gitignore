@@ -56,6 +56,15 @@ coverage.xml
 .pytest_cache/
 cover/
 
+# Test reports
+tests/reports/
+tests/reports/*.html
+
+# Generated documentation and reports
+tableau_ccusage_mensuel*.md
+generate_monthly_ccusage.sh
+TESTS.md
+
 # Translations
 *.mo
 *.pot
