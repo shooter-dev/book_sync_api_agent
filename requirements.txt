@@ -1,6 +1,9 @@
 pydantic
 fastapi[standard]
 pytest
+pytest-cov
+pytest-html
+pytest-asyncio
 pandas
 openai
 psycopg
