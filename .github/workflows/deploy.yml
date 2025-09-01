@@ -4,6 +4,15 @@ on:
   push:
     branches:
       - main
+    paths-ignore:
+      - 'docs/**'
+      - 'data_doc/**'
+      - '*.md'
+      - '.github/**'
+      - '.dockerignore'
+      - '.gitignore'
+      - 'Makefile'
+      - 'pytest.ini'
 
 env:
   AZURE_CONTAINER_REGISTRY: booksyncrepo.azurecr.io
