@@ -2,46 +2,36 @@ from pydantic import BaseModel
 from typing import List, Optional
 
 
-class RecommendedSeries(BaseModel):
+class RecommendedSerie(BaseModel):
     """Modèle pour une série recommandée."""
     title: str
-    genre: Optional[str] = None
-    category: Optional[str] = None
-    similarity_score: Optional[float] = None
-    reason: Optional[str] = None
+    id_series: str
+    responce_IA: str
 
 
 class PredictResponse(BaseModel):
-    """Modèle pour la réponse de prédiction/recherche."""
+    """Modèle pour la réponse de prédiction au format demandé."""
     
-    answer: str
-    thought_process: List[str]
-    enough_context: bool
-    sources_count: int
-    recommended_series: List[RecommendedSeries] = []
-    avg_similarity: Optional[float] = None
+    serie_recomendees: List[RecommendedSerie]
+    status: str
+    responce_IA_global: str
     
     class Config:
         json_schema_extra = {
             "example": {
-                "answer": "Basé sur votre profil et vos préférences, voici mes recommandations...",
-                "thought_process": [
-                    "Profil: Homme de 33 ans",
-                    "Préférences: Global Manga - Action",
-                    "Recherche effectuée avec 3 résultats",
-                    "Similarité moyenne: 0.854"
-                ],
-                "enough_context": True,
-                "sources_count": 3,
-                "recommended_series": [
+                "serie_recomendees": [
                     {
-                        "title": "Attack on Titan",
-                        "genre": "Action",
-                        "category": "Seinen",
-                        "similarity_score": 0.89,
-                        "reason": "Correspond à vos préférences d'action avec un style mature"
+                        "title": "Kaguya-sama: Love Is War",
+                        "id_series": "a1b2c3d4-e5f6-7890-1234-567890abcdef",
+                        "responce_IA": "Parfait pour vos goûts romance avec beaucoup d'humour"
+                    },
+                    {
+                        "title": "Toradora!",
+                        "id_series": "f1e2d3c4-b5a6-9870-5432-1098765fedcba",
+                        "responce_IA": "Romance moderne avec des personnages attachants"
                     }
                 ],
-                "avg_similarity": 0.854
+                "status": "success",
+                "responce_IA_global": "Voici mes recommandations basées sur votre profil et vos préférences romance"
             }
         }

@@ -1,43 +1,161 @@
-# 📚 Book Sync API
+# 📚 BookSync API Agent
 
-API pour la synchronisation de livres avec recherche vectorielle et prédictions IA.
+API FastAPI intelligente pour la recommandation personnalisée de mangas et livres basée sur les profils utilisateurs et la recherche vectorielle.
+
+## 🎯 Objectif
+
+Cette API sert de point d'entrée pour un agent IA capable de recommander des œuvres littéraires personnalisées en s'appuyant sur :
+
+- Le profil utilisateur (âge, genre, préférences)
+- L'historique de lecture
+- La collection d'œuvres possédées mais non lues
+- L'humeur actuelle de l'utilisateur
+- Un système de recherche vectorielle avec embeddings
+
+![Questionnaire](docs/images/questionnaire.png)
 
 ## 🚀 Installation
 
 ### Prérequis
-- Python 3.13+
-- Node.js (pour ccusage)
+- Python 3.10+
+- PostgreSQL (pour la base de données vectorielle)
+- OpenAI API Key ou Azure OpenAI
+- Git
 
 ### Setup
+
 ```bash
 # Cloner le repository
-git clone [repository-url]
-cd api
+git clone https://github.com/shooter-dev/book_sync_api_agent.git
+cd book_sync_api_agent
 
-# Activer l'environnement virtuel
-source .venv/bin/activate
+# Créer un environnement virtuel
+python -m venv venv
+source venv/bin/activate  # Sur Windows : venv\Scripts\activate
 
 # Installer les dépendances
 pip install -r requirements.txt
+```
+
+### Configuration
+
+Créer un fichier `.env` à la racine du projet :
+
+```env
+# Base de données PostgreSQL
+DATABASE_URL=postgresql://user:password@localhost:5432/booksync
+
+# OpenAI Configuration
+OPENAI_API_KEY=your_openai_api_key
+OPENAI_DEFAULT_MODEL=gpt-4
+OPENAI_TEMPERATURE=0.7
+OPENAI_MAX_TOKENS=500
+
+# Azure OpenAI (optionnel)
+USE_AZURE_OPENAI=false
+AZURE_OPENAI_API_KEY=your_azure_api_key
+AZURE_OPENAI_API_VERSION=2024-02-15-preview
+AZURE_OPENAI_AZURE_ENDPOINT=https://your-endpoint.openai.azure.com
+AZURE_OPENAI_DEFAULT_MODEL=gpt-4
 ```
 
 ## 🏃‍♂️ Lancement de l'API
 
 ```bash
 # Démarrer le serveur
-python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
 # L'API sera accessible sur: http://localhost:8000
 # Documentation Swagger: http://localhost:8000/docs
+```
+
+![API Documentation](docs/images/api_doc.png)
+
+## 🔧 Fonctionnalités
+
+### Endpoints Principaux
+
+- **POST `/predict/`** : Recommandations personnalisées basées sur le profil
+- **POST `/predict/test`** : Endpoint de test pour débugger
+- **POST `/predict/raw`** : Test avec JSON brut
+- **GET `/predict/health`** : Vérification de santé du service
+
+### Système de Recommandation
+
+L'agent utilise :
+1. **Analyse du profil utilisateur** : âge, genre, préférences, humeur
+2. **Recherche vectorielle** : similarité sémantique avec la base de données
+3. **Filtrage intelligent** : évite les doublons avec la collection existante
+4. **Personnalisation** : adaptation selon le type de prédiction demandée
+
+## 📊 Exemple d'Utilisation
+
+### Payload JSON
+
+```json
+{
+  "user_age": "22",
+  "user_genre": "Homme",
+  "genre_preference": "Manga",
+  "category_preference": "Romance",
+  "user_comment": "je cherche quelque chose de léger",
+  "prediction_type": "collection",
+  "collection": {
+    "Hunter X Hunter": {
+      "volumes": {
+        "4": "10150f42-3336-41d8-9243-68a95336d0a5",
+        "3": "63462427-e172-4642-b26d-efc70731bd29"
+      },
+      "id_series": "a2e0ddcf-71c6-406c-aadc-ccbac2d3f668"
+    }
+  },
+  "read": {
+    "One Piece": {
+      "volumes": {
+        "1": "ad4493ad-1310-404b-ace2-91f3dd4f489a"
+      },
+      "id_series": "a02cf154-af6c-4f08-9a7a-32f7bc229ac8"
+    }
+  },
+  "user_mood": "Énervé"
+}
+```
+
+### Réponse Structurée
+
+```json
+{
+  "answer": "Basé sur votre profil et vos préférences...",
+  "thought_process": [
+    "Profil: Homme de 22 ans",
+    "Préférences: Manga - Romance",
+    "Humeur: Énervé",
+    "Question générée: Recommandez-moi des Manga dans la catégorie Romance.",
+    "Recherche effectuée avec 5 résultats",
+    "Similarité moyenne: 0.823",
+    "Contexte suffisant pour répondre"
+  ],
+  "enough_context": true,
+  "sources_count": 5,
+  "recommended_series": [
+    {
+      "title": "Kaguya-sama: Love Is War",
+      "genre": "Romance",
+      "category": "Seinen",
+      "similarity_score": 0.856,
+      "reason": "Recommandé car correspond à votre préférence pour le Romance et style seinen dynamique"
+    }
+  ],
+  "avg_similarity": 0.823
+}
 ```
 
 ## 🧪 Tests
 
 ### Lancement des Tests
 
-#### Script Principal (Recommandé)
 ```bash
-# Tous les tests avec rapports complets
+# Script principal (recommandé)
 ./run_tests.sh
 
 # Tests par type
@@ -47,11 +165,11 @@ python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
 # Options utiles
 ./run_tests.sh --clean --open  # Nettoie et ouvre les rapports
-./run_tests.sh --no-html       # Pas de rapports HTML
 ./run_tests.sh --verbose       # Sortie détaillée
 ```
 
-#### Commandes pytest Directes
+### Commandes pytest Directes
+
 ```bash
 # Tests basiques
 pytest
@@ -65,74 +183,17 @@ pytest -m integration
 pytest -m api
 ```
 
-### 📊 Rapports de Tests
+### Rapports Générés
 
-Après exécution des tests, les rapports suivants sont générés :
-
-#### 1. **Coverage HTML** (Couverture de Code)
-- **Fichier** : `htmlcov/index.html`
-- **Contenu** : Couverture détaillée par fichier avec lignes non testées
-- **Ouverture** : Double-clic ou `open htmlcov/index.html`
-
-#### 2. **Test Report HTML** (Résultats des Tests)
-- **Fichier** : `tests/reports/report.html`
-- **Contenu** : Résultats détaillés, temps d'exécution, logs d'erreur
-- **Ouverture** : Double-clic ou `open tests/reports/report.html`
-
-#### 3. **Coverage XML** 
-- **Fichier** : `coverage.xml`
-- **Usage** : Intégration CI/CD, outils externes
-
-#### 4. **Documentation Tests**
-- **Fichier** : `TESTS.md`
-- **Contenu** : Guide complet des tests avec exemples
-- **Format** : Markdown avec navigation
-
-### 🎯 Marqueurs de Tests
-
-Les tests sont organisés par marqueurs :
-
-```python
-@pytest.mark.unit         # Tests unitaires
-@pytest.mark.integration  # Tests d'intégration  
-@pytest.mark.api          # Tests d'endpoints API
-@pytest.mark.slow         # Tests longs
-```
-
-### 📈 Métriques de Couverture
-
-- **Couverture actuelle** : 39%
-- **Objectif minimum** : 80%
-- **Objectif recommandé** : 90%+
-
-## 📋 Accès aux Rapports
-
-### Dans votre App/Finder :
-1. Naviguez vers : `Cours → projet_fil_rouge → api`
-2. Ouvrez les fichiers :
-   - `htmlcov/index.html` → Couverture de code
-   - `tests/reports/report.html` → Résultats des tests
-   - `TESTS.md` → Documentation complète
-
-### Ouverture Automatique :
-```bash
-# Ouvre automatiquement les rapports après les tests
-./run_tests.sh --open
-
-# Ou manuellement
-open htmlcov/index.html
-open tests/reports/report.html
-```
-
-## 🔧 Configuration
-
-- **pytest.ini** : Configuration des tests
-- **requirements.txt** : Dépendances (avec pytest, pytest-cov, pytest-html)
-- **.gitignore** : Exclut les rapports générés du versioning
+- **`htmlcov/index.html`** : Couverture de code détaillée
+- **`tests/reports/report.html`** : Résultats des tests
+- **`coverage.xml`** : Couverture pour CI/CD
+- **`TESTS.md`** : Documentation complète des tests
 
 ## 📊 Surveillance des Coûts IA
 
 ### ccusage (Monitoring Claude Code)
+
 ```bash
 # Rapport quotidien
 npx ccusage@latest daily
@@ -148,315 +209,89 @@ npx ccusage@latest blocks --live
 ./voice_alerts.sh check     # Vérification automatique
 ```
 
-## 🛠️ Développement
+## 🏗️ Architecture
 
 ### Structure du Projet
+
 ```
-api/
-├── app/                    # Code source
-│   ├── routes/            # Endpoints API
-│   ├── services/          # Logique métier
-│   ├── models/            # Modèles Pydantic
-│   └── config/            # Configuration
-├── tests/                 # Tests
-├── htmlcov/              # Rapports de couverture
-├── tests/reports/        # Rapports de tests
-└── TESTS.md              # Documentation des tests
+book_sync_api_agent/
+├── app/
+│   ├── main.py                    # Point d'entrée FastAPI
+│   ├── routes/
+│   │   └── predict_routes.py      # Endpoints de prédiction
+│   ├── services/
+│   │   ├── predict_service.py     # Logique de prédiction
+│   │   ├── synthesizer.py         # Agent IA de synthèse
+│   │   └── similarity_search.py   # Recherche vectorielle
+│   ├── models/
+│   │   ├── predict_request.py     # Modèles de requête
+│   │   └── predict_response.py    # Modèles de réponse
+│   ├── database/
+│   │   └── vector_store.py        # Interface base vectorielle
+│   └── config/
+│       └── settings.py            # Configuration
+├── tests/                         # Tests automatisés
+├── data/                          # Données d'entraînement
+├── images/                        # Assets documentation
+└── requirements.txt               # Dépendances Python
 ```
+
+### Flux de Données
+
+1. **Réception** : FastAPI reçoit le payload JSON via `/predict/`
+2. **Validation** : Pydantic valide et structure les données
+3. **Génération de Question** : Le service génère une question intelligente basée sur le profil
+4. **Recherche Vectorielle** : Similarité sémantique dans la base de données
+5. **Synthèse IA** : L'agent IA analyse le profil et génère des recommandations
+6. **Formatage** : Réponse structurée avec métadonnées et recommandations
+
+## 🛠️ Développement
 
 ### Commandes Utiles
-```bash
-# Lancer l'API
-python -m uvicorn app.main:app --reload
 
-# Tests complets
+```bash
+# Lancer l'API en mode développement
+uvicorn app.main:app --reload --port 8000
+
+# Tests complets avec rapports
 ./run_tests.sh --clean --open
 
-# Vérification ccusage
+# Vérification de l'utilisation des tokens
 npx ccusage@latest
 
-# Aide sur les tests
-./run_tests.sh --help
+# Linting et formatage du code
+black app/
+isort app/
+flake8 app/
 ```
 
-## 📖 Documentation
+### Variables d'Environnement
 
-- **TESTS.md** : Guide complet des tests
-- **Swagger UI** : http://localhost:8000/docs (quand l'API tourne)
-- **Rapports HTML** : Générés automatiquement après les tests
-=======
-# API Agent – BookSync
+- **`USE_AZURE_OPENAI`** : `true` pour utiliser Azure OpenAI, `false` pour OpenAI standard
+- **`DATABASE_URL`** : URL de connexion PostgreSQL
+- **`OPENAI_*`** : Configuration OpenAI
+- **`AZURE_OPENAI_*`** : Configuration Azure OpenAI
 
-## Objectif
+## 📈 Métriques
 
-Ce projet expose une API FastAPI qui sert de point d’entrée pour un agent intelligent capable de recommander des œuvres littéraires personnalisées. L’agent s’appuie sur :
+- **Couverture de tests** : 39% (objectif : 80%+)
+- **Performance** : < 2s par recommandation
+- **Précision** : Basée sur la similarité vectorielle (seuil : 0.7)
 
-- Le profil utilisateur premium  
-- L’historique de lecture  
-- La collection d’œuvres possédées mais non lues  
-- Un questionnaire a remplir
+## 🤝 Contribution
 
-![questionnaire](images/questionnaire.png)
----
+1. Fork le projet
+2. Créer une branche feature (`git checkout -b feature/nouvelle-fonctionnalite`)
+3. Commit les changements (`git commit -m 'Ajouter nouvelle fonctionnalité'`)
+4. Push la branche (`git push origin feature/nouvelle-fonctionnalite`)
+5. Créer une Pull Request
 
-## Rôle de FastAPI
+## 📄 Licence
 
-FastAPI agit comme **interface entre les données utilisateur et le moteur de recommandation IA**. Elle reçoit les informations via un endpoint `/predict/`, les valide avec Pydantic, les structure, puis les transmet à l’agent IA pour générer une prédiction.
+Ce projet est sous licence MIT. Voir le fichier `LICENSE` pour plus de détails.
 
----
+## 📞 Support
 
-Installation & Démarrage
-Prérequis
-Assure-toi d’avoir installé :
-
-* Python 3.10 ou plus
-
-* pip ou poetry
-
-* Git
-
-* Un environnement virtuel (recommandé)
-
-## installation du démarrage
-
-# Clone du dépôt
-git clone https://github.com/shooter-dev/book_sync_api_agent.git
-cd book_sync_api_agent
-
-# Création d’un environnement virtuel
-python -m venv venv
-source venv/bin/activate  # Sur Windows : venv\Scripts\activate
-
-# Installation des dépendances
-pip install -r requirements.txt
-
----
-
-## Configuration des variables d’environnement
-Crée un fichier .env à la racine du projet :
-```console
-URL_API_PREDICTION=http://127.0.0.1:8001/predict/
-DATABASE_URL=postgresql://user:password@localhost:5432/booksync
-```
----
-## Démarrage du serveur FastAPI
-
-```console
-uvicorn app.main:app --reload --port 8001
-```
-* Le serveur démarre sur http://127.0.0.1:8001
-
-* Les endpoints sont disponibles via Swagger : http://127.0.0.1:8001/docs
-
-![api_doc](images/api_doc.png)
----
-## Données attendues
-
-L’API reçoit un payload JSON contenant :
-```console
-- `user_age`, `user_genre` : données démographiques  
-- `genre_preference`, `category_preference` : préférences déclarées  
-- `user_comment` : remarques libres  
-- `prediction_type` : type de recommandation souhaitée (`collection` ou `proposition`)  
-- `collection` : œuvres possédées (volumes + ID de série)  
-- `read` : œuvres déjà lues  
-- *(optionnel)* `user_mood` : humeur du moment  
-```
----
-
-## 🧪 Exemple de payload JSON
-
-```json
-{
-  "user_age": 35,
-  "user_genre": "Homme",
-  "genre_preference": ["Manga", "Manhwa"],
-  "category_preference": ["Seinen", "Action", "Romance"],
-  "user_comment": "je veux rigoler",
-  "prediction_type": "proposition",
-  "user_mood": "Comique",
-  "collection": {
-    "Prison School": {
-      "volumes": {
-        "4": "c606eeda-6d05-45d7-9184-0a0514182259",
-        "3": "576711ba-3134-46b2-985b-1dcaa2fc9beb",
-        "2": "05f35d2a-aac7-4f13-a18e-158e9142472a",
-        "1": "3eb05a53-273b-438d-ab7b-4fbdb7cddb59"
-      },
-      "id_series": "346bd876-64cd-43e1-b11b-e876a67949bd"
-    },
-    "Raw Hero": {
-      "volumes": {
-        "3": "4ec0fa9d-f194-4c98-bb56-73129f2d41cf",
-        "2": "038c7a25-90e9-430f-90a8-b518b2ab7308",
-        "1": "e11f446e-f8cb-4a3a-b2ae-30d1c3d66d46"
-      },
-      "id_series": "e26e24bd-7dd3-4e42-837f-db32ec4a819a"
-    }
-  },
-  "read": {
-    "Raw Hero": {
-      "volumes": {
-        "2": "038c7a25-90e9-430f-90a8-b518b2ab7308",
-        "1": "e11f446e-f8cb-4a3a-b2ae-30d1c3d66d46"
-      },
-      "id_series": "e26e24bd-7dd3-4e42-837f-db32ec4a819a"
-    }
-  }
-} 
-```
-
-## Lancement des tests unitaires :
-
-  Tests
-
-  Lancement des Tests
-
-  Script Principal (Recommandé)
-
-  # Tous les tests avec rapports complets
-  ./run_tests.sh
-
-  # Tests par type
-  ./run_tests.sh --unit          # Tests unitaires seulement
-  ./run_tests.sh --integration   # Tests d'intégration seulement
-  ./run_tests.sh --api          # Tests API seulement
-
-  # Options utiles
-  ./run_tests.sh --clean --open  # Nettoie et ouvre les rapports
-  ./run_tests.sh --no-html       # Pas de rapports HTML
-  ./run_tests.sh --verbose       # Sortie détaillée
-
-  Commandes pytest Directes
-
-  # Tests basiques
-  pytest
-
-  # Tests avec couverture
-  pytest --cov=app --cov-report=html
-
-  # Tests par marqueur
-  pytest -m unit
-  pytest -m integration
-  pytest -m api
-
-  Rapports de Tests
-
-  Après exécution des tests, les rapports suivants sont générés :
-
-  1. Coverage HTML (Couverture de Code)
-
-  - Fichier : htmlcov/index.html
-  - Contenu : Couverture détaillée par fichier avec lignes non testées
-  - Ouverture : Double-clic ou open htmlcov/index.html
-
-  2. Test Report HTML (Résultats des Tests)
-
-  - Fichier : tests/reports/report.html
-  - Contenu : Résultats détaillés, temps d'exécution, logs d'erreur
-  - Ouverture : Double-clic ou open tests/reports/report.html
-
-  3. Coverage XML
-
-  - Fichier : coverage.xml
-  - Usage : Intégration CI/CD, outils externes
-
-  4. Documentation Tests
-
-  - Fichier : TESTS.md
-  - Contenu : Guide complet des tests avec exemples
-  - Format : Markdown avec navigation
-
-  Marqueurs de Tests
-
-  Les tests sont organisés par marqueurs :
-
-  @pytest.mark.unit         # Tests unitaires
-  @pytest.mark.integration  # Tests d'intégration  
-  @pytest.mark.api          # Tests d'endpoints API
-  @pytest.mark.slow         # Tests longs
-
-  Métriques de Couverture
-
-  - Couverture actuelle : 39%
-  - Objectif minimum : 80%
-  - Objectif recommandé : 90%+
-
-  Accès aux Rapports
-
-  Dans votre App/Finder :
-
-  1. Naviguez vers : Cours → projet_fil_rouge → api
-  2. Ouvrez les fichiers :
-    - htmlcov/index.html → Couverture de code
-    - tests/reports/report.html → Résultats des tests
-    - TESTS.md → Documentation complète
-
-  Ouverture Automatique :
-
-  # Ouvre automatiquement les rapports après les tests
-  ./run_tests.sh --open
-
-  # Ou manuellement
-  open htmlcov/index.html
-  open tests/reports/report.html
-
-  🔧 Configuration
-
-  - pytest.ini : Configuration des tests
-  - requirements.txt : Dépendances (avec pytest, pytest-cov, pytest-html)
-  - .gitignore : Exclut les rapports générés du versioning
-
-  Surveillance des Coûts IA
-
-  ccusage (Monitoring Claude Code)
-
-  # Rapport quotidien
-  npx ccusage@latest daily
-
-  # Rapport mensuel  
-  npx ccusage@latest monthly
-
-  # Surveillance en temps réel
-  npx ccusage@latest blocks --live
-
-  # Alertes vocales (macOS)
-  ./voice_alerts.sh fini      # Alerte tokens épuisés
-  ./voice_alerts.sh check     # Vérification automatique
-
-  🛠️ Développement
-
-  Structure du Projet
-
-  api/
-  ├── app/                    # Code source
-  │   ├── routes/            # Endpoints API
-  │   ├── services/          # Logique métier
-  │   ├── models/            # Modèles Pydantic
-  │   └── config/            # Configuration
-  ├── tests/                 # Tests
-  ├── htmlcov/              # Rapports de couverture
-  ├── tests/reports/        # Rapports de tests
-  └── TESTS.md              # Documentation des tests
-
-  Commandes Utiles
-
-  # Lancer l'API
-  python -m uvicorn app.main:app --reload
-
-  # Tests complets
-  ./run_tests.sh --clean --open
-
-  # Vérification ccusage
-  npx ccusage@latest
-
-  # Aide sur les tests
-  ./run_tests.sh --help
-
-  Documentation
-
-  - TESTS.md : Guide complet des tests
-  - Rapports HTML : Générés automatiquement après les tests
-
-
-
+- **Documentation** : [Swagger UI](http://localhost:8000/docs) quand l'API est en cours d'exécution
+- **Tests** : Voir `TESTS.md` pour la documentation complète des tests
+- **Issues** : Utiliser GitHub Issues pour les bugs et demandes de fonctionnalités

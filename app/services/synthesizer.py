@@ -18,137 +18,78 @@ class SynthesizerResponse(BaseModel):
 class Synthesizer:
     """Service pour synthétiser des réponses basées sur le contexte récupéré."""
 
-    @staticmethod
-    def generate_response(question: str, context: pd.DataFrame, user_profile: dict = None) -> SynthesizerResponse:
-        print("=== DEBUT generate_response ===")
-        print(f"Question: {question}")
-        print(f"Context shape: {context.shape if not context.empty else 'EMPTY'}")
+    def generate_global_response(self, recommended_series: List, user_profile: dict) -> str:
         """
-        Génère une réponse basée sur la question et le contexte fourni.
-        
-        Args:
-            question: La question de l'utilisateur
-            context: DataFrame contenant le contexte pertinent de la recherche vectorielle
-            
-        Returns:
-            SynthesizerResponse: La réponse synthétisée avec le processus de réflexion
+        Génère une réponse globale personnalisée pour l'utilisateur.
         """
-        settings = get_settings()
+        print("=== DEBUT generate_global_response ===")
+        print(f"Séries recommandées: {len(recommended_series)}")
+        print(f"Profil utilisateur: {user_profile.get('user_genre')} {user_profile.get('user_age')} ans")
         
-        # Vérifier si Azure OpenAI doit être utilisé
-        use_azure = os.getenv("USE_AZURE_OPENAI", "false").lower() == "true"
-        
-        if use_azure:
-            client = AzureOpenAI(
-                api_key=settings.azure_openai.api_key,
-                api_version=settings.azure_openai.api_version,
-                azure_endpoint=settings.azure_openai.azure_endpoint
-            )
-            model = settings.azure_openai.default_model
-        else:
-            client = OpenAI(api_key=settings.openai.api_key)
-            model = settings.openai.default_model
-
-        # Traitement du contexte
-        if context.empty:
-            context_text = "Aucun contexte spécifique trouvé dans la base de données."
-        else:
-            # Construire le contexte à partir du DataFrame
-            context_text = ""
-            for _, row in context.iterrows():
-                context_text += f"Source (similarité: {row.get('similarity', 0):.3f}):\n"
-                context_text += f"{row.get('content', '')}\n\n"
-
-        profile_text = ""
-
-        if user_profile:
-            profile_text = f"""
-            PROFIL UTILISATEUR:
-            - Âge: {user_profile.get('user_age', 'Non spécifié')}
-            - Genre: {user_profile.get('user_genre', 'Non spécifié')}
-            - Préférence genre: {user_profile.get('genre_preference', 'Non spécifié')}
-            - Préférence catégorie: {user_profile.get('category_preference', 'Non spécifié')}
-            - Humeur actuelle: {user_profile.get('user_mood', 'Non spécifié')}
-            - Type de prédiction: {user_profile.get('prediction_type', 'Non spécifié')}
-            - Collection actuelle: {user_profile.get('collection', 'Aucune')}
-            - Déjà lu: {user_profile.get('read', 'Rien')}
-            """
-
-        # Prompt système
-        system_prompt = """
-        Tu es un assistant spécialisé dans les recommandations de mangas et livres basées sur les profils utilisateurs.
-        
-        Tu reçois des données structurées contenant :
-        - Le profil utilisateur (âge, genre, préférences de genre/catégorie, humeur)
-        - La collection actuelle de l'utilisateur (séries possédées avec leurs volumes)
-        - Les volumes déjà lus par l'utilisateur
-        - Le type de prédiction demandée (collection ou recommendation)
-        
-        Ton rôle est de :
-        1. Analyser le profil et les habitudes de lecture de l'utilisateur
-        2. Utiliser le contexte fourni pour faire des recommandations pertinentes
-        3. Tenir compte de l'humeur actuelle de l'utilisateur pour adapter tes suggestions
-        4. Éviter de recommander ce que l'utilisateur a déjà lu
-        
-        Réponds de manière personnalisée en expliquant pourquoi tes recommandations correspondent au profil de l'utilisateur.
-        Si le contexte n'est pas suffisant, dis-le clairement.
-        
-        IMPORTANT: Formate ta réponse sous forme de liste de séries avec pour chaque série :
-        - Nom de la série
-        - Raison de la recommandation basée sur le profil utilisateur
-        - Correspondance avec l'humeur/préférences actuelles"""
-
-
-        # Prompt utilisateur
-        user_prompt = f"""
-        Question: {question}
-        {profile_text}
-        Contexte disponible:
-        {context_text}
-        
-        Utilise les informations du profil utilisateur pour faire des recommandations personnalisées. 
-        Même sans contexte spécifique de la base de données, utilise tes connaissances générales sur les mangas pour recommander des séries adaptées au profil."""
-
-
-        print('--------------------------------------------------------------')
-        print(system_prompt)
-        print('--------------------------------------------------------------')
-
         try:
-            # Générer la réponse
+            settings = get_settings()
+            
+            # Vérifier si Azure OpenAI doit être utilisé
+            use_azure = os.getenv("USE_AZURE_OPENAI", "false").lower() == "true"
+            
+            if use_azure:
+                client = AzureOpenAI(
+                    api_key=settings.azure_openai.api_key,
+                    api_version=settings.azure_openai.api_version,
+                    azure_endpoint=settings.azure_openai.azure_endpoint
+                )
+                model = settings.azure_openai.default_model
+            else:
+                client = OpenAI(api_key=settings.openai.api_key)
+                model = settings.openai.default_model
+            
+            # Construire la liste des séries recommandées
+            series_list = ""
+            if recommended_series:
+                for i, serie in enumerate(recommended_series, 1):
+                    series_list += f"{i}. {serie.title}\n"
+            else:
+                series_list = "Aucune série trouvée dans la base de données."
+            
+            # Prompt pour générer une réponse globale personnalisée
+            prompt = f"""
+Profil utilisateur:
+- Âge: {user_profile.get('user_age')} ans
+- Genre: {user_profile.get('user_genre')}
+- Préférences: {user_profile.get('genre_preference')} - {user_profile.get('category_preference')}
+- Humeur: {user_profile.get('user_mood', 'Non spécifiée')}
+- Type de prédiction: {user_profile.get('prediction_type')}
+
+Séries recommandées trouvées:
+{series_list}
+
+Génère une réponse personnalisée et chaleureuse (2-3 phrases maximum) qui:
+1. S'adresse directement à l'utilisateur
+2. Explique brièvement pourquoi ces recommandations correspondent à son profil
+3. Prend en compte son humeur et ses préférences
+4. Reste concise et engageante
+
+Réponse uniquement le texte, sans format JSON ni structure supplémentaire.
+"""
+            
+            print('--------------------------------------------------------------')
+            print(prompt)
+            print('--------------------------------------------------------------')
+            
             response = client.chat.completions.create(
                 model=model,
                 messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt}
+                    {"role": "user", "content": prompt}
                 ],
-                temperature=settings.openai.temperature,
-                max_tokens=settings.openai.max_tokens or 500
+                temperature=0.7,
+                max_tokens=200
             )
-
-            answer = response.choices[0].message.content
-
-            # Évaluer si le contexte est suffisant (basé sur la similarité moyenne)
-            avg_similarity = context['similarity'].mean() if 'similarity' in context.columns else 0
-            enough_context = avg_similarity > 0.7  # Seuil de similarité
-
-            # Processus de réflexion
-            thought_process = [
-                f"Recherche effectuée avec {len(context)} résultats",
-                f"Similarité moyenne: {avg_similarity:.3f}",
-                f"Contexte {'suffisant' if enough_context else 'insuffisant'} pour répondre"
-            ]
-
-            return SynthesizerResponse(
-                answer=answer,
-                thought_process=thought_process,
-                enough_context=enough_context
-            )
-
+            
+            global_response = response.choices[0].message.content.strip()
+            print(f"Réponse globale générée: {global_response}")
+            
+            return global_response
+            
         except Exception as e:
-            logging.error(f"Erreur lors de la génération de la réponse: {e}")
-            return SynthesizerResponse(
-                answer="Une erreur s'est produite lors de la génération de la réponse.",
-                thought_process=[f"Erreur: {str(e)}"],
-                enough_context=False
-            )
+            logging.error(f"Erreur lors de la génération de la réponse globale: {e}")
+            return f"Voici mes recommandations basées sur votre profil {user_profile.get('user_genre')} de {user_profile.get('user_age')} ans avec des préférences pour le {user_profile.get('category_preference')}."
