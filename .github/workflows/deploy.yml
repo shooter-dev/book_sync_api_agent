@@ -3,31 +3,53 @@ name: Build and Deploy to Azure Container App
 on:
   push:
     branches:
-      - main
+      - dev
     paths-ignore:
       - 'docs/**'
+      - 'README.md'
       - 'data_doc/**'
       - '*.md'
       - '.github/**'
       - '.dockerignore'
-      - '.gitignore'
-      - 'Makefile'
-      - 'pytest.ini'
 
 env:
   AZURE_CONTAINER_REGISTRY: booksyncrepo.azurecr.io
-  IMAGE_NAME: api-booksync
+  IMAGE_NAME: app-booksync
   RESOURCE_GROUP: vplatevoetRG
-  CONTAINER_APP: api-booksync
+  CONTAINER_APP: app-booksync
 
 jobs:
-  build-and-deploy:
+  build-test-and-deploy:
     runs-on: ubuntu-latest
 
     steps:
       # 1. Récupération du code source
       - name: Checkout code
         uses: actions/checkout@v4
+
+      # 1.5 configuration python
+      - name: Configurer Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Installer les dépendances
+        run: |
+          python -m pip install --upgrade pip
+          pip install flake8 pytest
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+
+      # 2.5 test ping azure
+      - name: Lint avec flake8
+        run: |
+          # arrêter le build s'il y a des erreurs de syntaxe Python ou des noms indéfinis
+          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+          # exit-zero traite toutes les erreurs comme des avertissements
+          flake8 . --count --exit-zero --max-complexity=10 --max-line-length=120 --statistics
+
+      - name: Lancer les tests
+        run: |
+          pytest
 
       # 2. Connexion à Azure
       - name: Azure CLI login

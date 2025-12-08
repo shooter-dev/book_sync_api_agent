@@ -1,0 +1,40 @@
+Parfait ! Vous êtes connecté à Azure. ✅
+
+  Voici ce que vous avez :
+  - Subscription : HDF_LILLE_DEV_IA_146983_PRF_P6
+  - Subscription ID : 18f74461-238d-4fc9-ac5e-e20627c7e405
+  - Tenant : Simplonformations.co
+
+  Étapes suivantes (suivez le CICD.md) :
+
+  1. Récupérer votre Subscription ID (pour confirmer)
+
+  az account show --query id -o tsv
+
+
+  Notez cette valeur : 18f74461-238d-4fc9-ac5e-e20627c7e405
+
+  2. Récupérer les credentials Azure Container Registry
+
+  # Vérifier que votre ACR existe
+  az acr show --name booksyncrepo --resource-group vplatevoetRG
+
+  # Activer l'admin user
+  az acr update --name booksyncrepo --admin-enabled true
+
+  # Récupérer les credentials
+  az acr credential show --name booksyncrepo --resource-group vplatevoetRG
+
+  Notez le username et un des password.
+
+  3. Créer le Service Principal
+
+  az ad sp create-for-rbac \
+    --name "booksync-github-actions" \
+    --role contributor \
+    --scopes /subscriptions/18f74461-238d-4fc9-ac5e-e20627c7e405/resourceGroups/vplatevoetRG \
+    --sdk-auth
+
+  🚨 IMPORTANT : Copiez tout le JSON qui sera retourné !
+
+  Commencez par l'étape 2 ci-dessus et montrez-moi les résultats si vous avez des questions.
