@@ -9,7 +9,6 @@ on:
       - 'docs/**'
       - 'data_doc/**'
       - '*.md'
-      - '.github/**'
       - '.dockerignore'
       - '.gitignore'
 
