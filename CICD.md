@@ -6,12 +6,13 @@ Ce document explique comment mettre en place un pipeline CI/CD complet pour auto
 
 1. [Qu'est-ce que la CI/CD ?](#quest-ce-que-la-cicd-)
 2. [Architecture du pipeline](#architecture-du-pipeline)
-3. [Prérequis](#prérequis)
-4. [Configuration des secrets GitHub](#configuration-des-secrets-github)
-5. [Création du workflow GitHub Actions](#création-du-workflow-github-actions)
-6. [Déploiement manuel (avant automatisation)](#déploiement-manuel-avant-automatisation)
-7. [Tests et validation](#tests-et-validation)
-8. [Surveillance et maintenance](#surveillance-et-maintenance)
+3. [Tests unitaires et couverture](#tests-unitaires-et-couverture)
+4. [Prérequis](#prérequis)
+5. [Configuration des secrets GitHub](#configuration-des-secrets-github)
+6. [Création du workflow GitHub Actions](#création-du-workflow-github-actions)
+7. [Déploiement manuel (avant automatisation)](#déploiement-manuel-avant-automatisation)
+8. [Tests et validation](#tests-et-validation)
+9. [Surveillance et maintenance](#surveillance-et-maintenance)
 
 ---
 
@@ -62,6 +63,210 @@ Code Push sur GitHub
         ↓
    ✅ API en ligne
 ```
+
+---
+
+## Tests unitaires et couverture
+
+### Vue d'ensemble de la suite de tests
+
+Le projet dispose d'une suite complète de **73 tests unitaires** organisés en 5 modules, couvrant toutes les couches de l'application.
+
+### Organisation des tests
+
+```
+tests/
+├── database/
+│   └── test_vector_store.py         # 15 tests - VectorStore et PostgreSQL
+├── services/
+│   ├── test_predict_service.py      # 17 tests - Service de prédiction
+│   └── test_synthesizer.py          # 8 tests - Génération de réponses IA
+├── routes/
+│   └── test_predict_routes.py       # 15 tests - Endpoints API
+└── models/
+    └── test_models.py                # 18 tests - Modèles Pydantic
+```
+
+### Couverture des tests par module
+
+#### 1. **test_vector_store.py** (15 tests)
+Tests de la couche de données et recherche vectorielle :
+- ✅ Initialisation avec OpenAI et Azure OpenAI
+- ✅ Génération d'embeddings
+- ✅ Création et gestion des tables/index
+- ✅ Opérations CRUD (upsert, search, delete)
+- ✅ Recherche avec filtres de métadonnées
+- ✅ Validation des paramètres
+
+#### 2. **test_predict_service.py** (17 tests)
+Tests de la logique métier de prédiction :
+- ✅ Prédictions réussies et gestion d'erreurs
+- ✅ Recherche de volumes similaires (avec/sans collection)
+- ✅ Extraction des recommandations de séries
+- ✅ Génération de réponses IA personnalisées
+- ✅ Gestion des différentes humeurs et catégories
+- ✅ Déduplication des résultats
+
+#### 3. **test_synthesizer.py** (8 tests)
+Tests de la génération de réponses IA :
+- ✅ Génération avec OpenAI/Azure OpenAI
+- ✅ Gestion des cas sans résultats
+- ✅ Gestion d'erreurs et fallback
+- ✅ Validation de la structure du prompt
+- ✅ Configuration des paramètres (température, tokens)
+
+#### 4. **test_predict_routes.py** (15 tests)
+Tests des endpoints FastAPI :
+- ✅ Health check `/predict/health`
+- ✅ Endpoint principal `/predict/`
+- ✅ Endpoints de test `/predict/test` et `/predict/raw`
+- ✅ Validation des requêtes invalides
+- ✅ Tests avec différentes catégories et humeurs
+- ✅ Requêtes concurrentes
+
+#### 5. **test_models.py** (18 tests)
+Tests de validation Pydantic :
+- ✅ Validation des champs obligatoires/optionnels
+- ✅ Types de prédiction (collection/recommendation)
+- ✅ Limites et contraintes
+- ✅ Formats dict/string pour collection
+- ✅ Sérialisation JSON
+- ✅ Support Unicode
+
+### Commandes pour lancer les tests
+
+#### Tests locaux
+
+```bash
+# Tous les tests avec couverture
+pytest --cov=app --cov-report=html --cov-report=term
+
+# Tests spécifiques par module
+pytest tests/database/test_vector_store.py -v
+pytest tests/services/test_predict_service.py -v
+pytest tests/services/test_synthesizer.py -v
+pytest tests/routes/test_predict_routes.py -v
+pytest tests/models/test_models.py -v
+
+# Tests par marqueur (si configuré)
+pytest -m unit
+pytest -m integration
+
+# Tests verbeux avec traceback complet
+pytest -v --tb=long
+
+# Tests avec arrêt à la première erreur
+pytest -x
+
+# Tests d'un fichier spécifique
+pytest tests/services/test_predict_service.py::TestPredictService::test_predict_success -v
+```
+
+#### Rapports de couverture
+
+```bash
+# Génère un rapport HTML
+pytest --cov=app --cov-report=html
+
+# Ouvre le rapport dans le navigateur
+open htmlcov/index.html  # macOS
+xdg-open htmlcov/index.html  # Linux
+
+# Rapport XML pour CI/CD
+pytest --cov=app --cov-report=xml
+
+# Rapport dans le terminal
+pytest --cov=app --cov-report=term-missing
+```
+
+### Intégration dans le pipeline CI/CD
+
+Les tests sont automatiquement exécutés dans GitHub Actions à chaque push ou pull request.
+
+**Configuration dans `.github/workflows/ci-cd.yml` :**
+
+```yaml
+- name: Lancement des tests avec pytest
+  env:
+    USE_AZURE_OPENAI: true
+    AZURE_OPENAI_ENDPOINT: ${{ secrets.AZURE_OPENAI_ENDPOINT }}
+    AZURE_OPENAI_KEY: ${{ secrets.AZURE_OPENAI_KEY }}
+    TIMESCALE_SERVICE_URL: ${{ secrets.TIMESCALE_SERVICE_URL }}
+  run: |
+    pytest --cov=app --cov-report=xml --cov-report=term
+
+- name: Upload du rapport de couverture
+  uses: codecov/codecov-action@v3
+  with:
+    file: ./coverage.xml
+    fail_ci_if_error: false
+```
+
+### Stratégies de tests
+
+#### Tests unitaires avec mocking
+
+Les tests utilisent `unittest.mock` et `pytest` pour isoler les composants :
+
+```python
+# Exemple : Mock de VectorStore dans PredictService
+@patch('app.services.predict_service.VectorStore.search')
+def test_search_similar_volumes(mock_vector_search):
+    mock_vector_search.return_value = mock_search_results
+    result = predict_service._search_similar_volumes(request)
+    assert isinstance(result, pd.DataFrame)
+```
+
+#### Tests asynchrones
+
+Les tests des services asynchrones utilisent `pytest-asyncio` :
+
+```python
+@pytest.mark.asyncio
+async def test_predict_success(mock_search):
+    result = await predict_service.predict(sample_request)
+    assert result.status == "success"
+```
+
+#### Fixtures pytest
+
+Utilisation extensive de fixtures pour la réutilisabilité :
+
+```python
+@pytest.fixture
+def sample_request():
+    return PredictRequest(
+        user_age="25",
+        user_genre="Homme",
+        ...
+    )
+```
+
+### Objectifs de couverture
+
+| Composant | Couverture actuelle | Objectif |
+|-----------|---------------------|----------|
+| Services | ~85% | 90%+ |
+| Routes | ~80% | 85%+ |
+| Models | ~95% | 95%+ |
+| Database | ~75% | 80%+ |
+| **Global** | **~84%** | **90%+** |
+
+### Bonnes pratiques
+
+1. **Isolation** : Chaque test est indépendant et ne dépend pas des autres
+2. **Mocking** : Les dépendances externes (DB, OpenAI) sont mockées
+3. **Nomenclature** : Noms de tests descriptifs (`test_predict_success`, `test_predict_with_error`)
+4. **Assertions** : Vérifications complètes des résultats
+5. **Documentation** : Docstrings pour chaque classe et méthode de test
+
+### Amélioration continue
+
+**Prochaines étapes :**
+- [ ] Ajouter des tests d'intégration avec base de données réelle
+- [ ] Tests de charge avec locust ou pytest-benchmark
+- [ ] Tests de sécurité (injection SQL, XSS)
+- [ ] Augmenter la couverture à 90%+
 
 ---
 

@@ -1,7 +1,10 @@
 *.DS_Store
 .claude/
-CLAUDE.md
 sendbox.py
+
+# Ignorer tous les fichiers .md SAUF README.md
+*.md
+!README.md
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
