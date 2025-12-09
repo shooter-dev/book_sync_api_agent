@@ -6,6 +6,7 @@ Ce module teste la validation et la sérialisation des modèles de données.
 
 import pytest
 from pydantic import ValidationError
+
 from app.models.predict_request import PredictRequest
 from app.models.predict_response import PredictResponse, RecommendedSerie
 
@@ -22,7 +23,7 @@ class TestPredictRequest:
             "genre_preference": "Manga",
             "category_preference": "Action",
             "prediction_type": "recommendation",
-            "user_mood": "Calme"
+            "user_mood": "Calme",
         }
 
         # Exécution
@@ -48,22 +49,12 @@ class TestPredictRequest:
             "category_preference": "Action",
             "user_comment": "Je cherche de l'action intense",
             "prediction_type": "collection",
-            "collection": {
-                "One Piece": {
-                    "volumes": {"1": "uuid-1"},
-                    "id_series": "series-uuid-1"
-                }
-            },
-            "read": {
-                "Naruto": {
-                    "volumes": {"1": "uuid-2"},
-                    "id_series": "series-uuid-2"
-                }
-            },
+            "collection": {"One Piece": {"volumes": {"1": "uuid-1"}, "id_series": "series-uuid-1"}},
+            "read": {"Naruto": {"volumes": {"1": "uuid-2"}, "id_series": "series-uuid-2"}},
             "user_mood": "Énervé",
             "question": "Quelle série me recommandez-vous ?",
             "limit": 10,
-            "metadata_filter": {"genre": "Action"}
+            "metadata_filter": {"genre": "Action"},
         }
 
         # Exécution
@@ -92,10 +83,10 @@ class TestPredictRequest:
 
         # Vérifie que les champs manquants sont mentionnés
         errors = exc_info.value.errors()
-        error_fields = [error['loc'][0] for error in errors]
-        assert 'user_genre' in error_fields
-        assert 'genre_preference' in error_fields
-        assert 'category_preference' in error_fields
+        error_fields = [error["loc"][0] for error in errors]
+        assert "user_genre" in error_fields
+        assert "genre_preference" in error_fields
+        assert "category_preference" in error_fields
 
     def test_prediction_type_validation(self):
         """Test la validation du type de prédiction."""
@@ -104,7 +95,7 @@ class TestPredictRequest:
             "user_genre": "Homme",
             "genre_preference": "Manga",
             "category_preference": "Action",
-            "user_mood": "Calme"
+            "user_mood": "Calme",
         }
 
         # Test avec "collection"
@@ -127,7 +118,7 @@ class TestPredictRequest:
             "genre_preference": "Manga",
             "category_preference": "Action",
             "prediction_type": "recommendation",
-            "user_mood": "Calme"
+            "user_mood": "Calme",
         }
 
         # Test avec limite valide
@@ -151,12 +142,7 @@ class TestPredictRequest:
             "category_preference": "Action",
             "prediction_type": "recommendation",
             "user_mood": "Calme",
-            "collection": {
-                "Attack on Titan": {
-                    "volumes": {"1": "uuid-1", "2": "uuid-2"},
-                    "id_series": "series-uuid"
-                }
-            }
+            "collection": {"Attack on Titan": {"volumes": {"1": "uuid-1", "2": "uuid-2"}, "id_series": "series-uuid"}},
         }
 
         # Exécution
@@ -176,7 +162,7 @@ class TestPredictRequest:
             "category_preference": "Action",
             "prediction_type": "recommendation",
             "user_mood": "Calme",
-            "collection": "{}"
+            "collection": "{}",
         }
 
         # Exécution
@@ -206,7 +192,7 @@ class TestRecommendedSerie:
         serie_data = {
             "title": "Attack on Titan",
             "id_series": "series-uuid-1",
-            "responce_IA": "Parfait pour votre goût pour l'action intense"
+            "responce_IA": "Parfait pour votre goût pour l'action intense",
         }
 
         # Exécution
@@ -230,11 +216,7 @@ class TestRecommendedSerie:
 
     def test_empty_fields_recommended_serie(self):
         """Test avec champs vides."""
-        serie_data = {
-            "title": "Attack on Titan",
-            "id_series": "series-uuid-1",
-            "responce_IA": ""  # Réponse vide
-        }
+        serie_data = {"title": "Attack on Titan", "id_series": "series-uuid-1", "responce_IA": ""}  # Réponse vide
 
         # Exécution
         serie = RecommendedSerie(**serie_data)
@@ -250,19 +232,11 @@ class TestPredictResponse:
         """Test une réponse valide avec des séries recommandées."""
         response_data = {
             "serie_recomendees": [
-                {
-                    "title": "Attack on Titan",
-                    "id_series": "series-uuid-1",
-                    "responce_IA": "Action intense"
-                },
-                {
-                    "title": "Demon Slayer",
-                    "id_series": "series-uuid-2",
-                    "responce_IA": "Animation époustouflante"
-                }
+                {"title": "Attack on Titan", "id_series": "series-uuid-1", "responce_IA": "Action intense"},
+                {"title": "Demon Slayer", "id_series": "series-uuid-2", "responce_IA": "Animation époustouflante"},
             ],
             "status": "success",
-            "responce_IA_global": "Voici mes recommandations pour vous"
+            "responce_IA_global": "Voici mes recommandations pour vous",
         }
 
         # Exécution
@@ -280,7 +254,7 @@ class TestPredictResponse:
         response_data = {
             "serie_recomendees": [],
             "status": "success",
-            "responce_IA_global": "Aucune série ne correspond à vos critères"
+            "responce_IA_global": "Aucune série ne correspond à vos critères",
         }
 
         # Exécution
@@ -296,7 +270,7 @@ class TestPredictResponse:
         response_data = {
             "serie_recomendees": [],
             "status": "error",
-            "responce_IA_global": "Une erreur s'est produite lors de la recherche"
+            "responce_IA_global": "Une erreur s'est produite lors de la recherche",
         }
 
         # Exécution
@@ -332,14 +306,10 @@ class TestPredictResponse:
         """Test la sérialisation de la réponse."""
         response_data = {
             "serie_recomendees": [
-                {
-                    "title": "Attack on Titan",
-                    "id_series": "series-uuid-1",
-                    "responce_IA": "Action intense"
-                }
+                {"title": "Attack on Titan", "id_series": "series-uuid-1", "responce_IA": "Action intense"}
             ],
             "status": "success",
-            "responce_IA_global": "Voici ma recommandation"
+            "responce_IA_global": "Voici ma recommandation",
         }
 
         # Exécution
@@ -358,11 +328,11 @@ class TestPredictResponse:
                 {
                     "title": "進撃の巨人",  # Attack on Titan en japonais
                     "id_series": "series-uuid-1",
-                    "responce_IA": "アクション漫画"  # Action manga en japonais
+                    "responce_IA": "アクション漫画",  # Action manga en japonais
                 }
             ],
             "status": "success",
-            "responce_IA_global": "日本のマンガをおすすめします"
+            "responce_IA_global": "日本のマンガをおすすめします",
         }
 
         # Exécution

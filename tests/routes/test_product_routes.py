@@ -1,9 +1,7 @@
-from fastapi.testclient import TestClient
-from app.main import app
+"""
+Tests pour les routes produits.
 
-client = TestClient(app)
+Ces tests seront implémentés quand les routes produits seront créées.
+"""
 
-def test_get_products():
-    resp = client.get("/products")
-    assert resp.status_code == 200
-    assert resp.json() == {"products": ["apple", "banana", "orange"]}
+# Pas de tests pour le moment
