@@ -65,42 +65,41 @@ jobs:
           file: ./coverage.xml
           fail_ci_if_error: false
 
-  # Job 2 : Build et Deploy Azure (DÉSACTIVÉ - À activer après configuration Azure)
-  # Décommentez ce job après avoir configuré le secret AZURE_CREDENTIALS dans GitHub
-  # build-and-deploy:
-  #   name: Build et Déploiement Azure
-  #   runs-on: ubuntu-latest
-  #   needs: test  # Ne s'exécute QUE si les tests passent
-  #   if: github.ref == 'refs/heads/main'  # Seulement sur la branche main
-  #
-  #   steps:
-  #     # 1. Récupération du code source
-  #     - name: Checkout code
-  #       uses: actions/checkout@v4
-  #
-  #     # 2. Connexion à Azure
-  #     - name: Azure CLI login
-  #       uses: azure/login@v2
-  #       with:
-  #         creds: ${{ secrets.AZURE_CREDENTIALS }}
-  #
-  #     # 3. Connexion à ACR
-  #     - name: Docker login to ACR
-  #       run: |
-  #         az acr login --name booksyncrepo
-  #
-  #     # 4. Build et Push de l'image Docker
-  #     - name: Build and Push Docker image
-  #       run: |
-  #         IMAGE_TAG=${{ github.sha }}
-  #         docker build -t $AZURE_CONTAINER_REGISTRY/$IMAGE_NAME:$IMAGE_TAG .
-  #         docker push $AZURE_CONTAINER_REGISTRY/$IMAGE_NAME:$IMAGE_TAG
-  #         echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_ENV
-  #
-  #     # 5. Mise à jour du Container App
-  #     - name: Deploy to Azure Container Apps
-  #       run: |
-  #         az containerapp update \
-  #           --name $CONTAINER_APP \
-  #           --resource-group $RESOURCE_GROUP \
-  #           --image $AZURE_CONTAINER_REGISTRY/$IMAGE_NAME:$IMAGE_TAG
+  # Job 2 : Build et Deploy Azure (ACTIVÉ)
+  build-and-deploy:
+    name: Build et Déploiement Azure
+    runs-on: ubuntu-latest
+    needs: test  # Ne s'exécute QUE si les tests passent
+    if: github.ref == 'refs/heads/main'  # Seulement sur la branche main
+
+    steps:
+      # 1. Récupération du code source
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # 2. Connexion à Azure
+      - name: Azure CLI login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      # 3. Connexion à ACR
+      - name: Docker login to ACR
+        run: |
+          az acr login --name booksyncrepo
+
+      # 4. Build et Push de l'image Docker
+      - name: Build and Push Docker image
+        run: |
+          IMAGE_TAG=${{ github.sha }}
+          docker build -t $AZURE_CONTAINER_REGISTRY/$IMAGE_NAME:$IMAGE_TAG .
+          docker push $AZURE_CONTAINER_REGISTRY/$IMAGE_NAME:$IMAGE_TAG
+          echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_ENV
+
+      # 5. Mise à jour du Container App
+      - name: Deploy to Azure Container Apps
+        run: |
+          az containerapp update \
+            --name $CONTAINER_APP \
+            --resource-group $RESOURCE_GROUP \
+            --image $AZURE_CONTAINER_REGISTRY/$IMAGE_NAME:$IMAGE_TAG
