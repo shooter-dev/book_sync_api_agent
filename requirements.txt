@@ -7,8 +7,12 @@ pytest-asyncio
 pandas
 openai
 psycopg
+psycopg2-binary
+pgvector
 python-dotenv
 timescale-vector
 instructor
 anthropic
 uvicorn
+prometheus-client
+prometheus-fastapi-instrumentator

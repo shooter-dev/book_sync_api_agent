@@ -1,29 +1,69 @@
-from fastapi import APIRouter, HTTPException, Request
-from app.services.predict_service import PredictService
+from fastapi import APIRouter, HTTPException, Request, Depends
 from app.models.predict_request import PredictRequest
 from app.models.predict_response import PredictResponse
+from app.middleware.auth import verify_api_key
 
 router = APIRouter(
     prefix="/predict",
     tags=["prediction"]
 )
 
-predict_service = PredictService()
+# Instance du service (initialisée de manière paresseuse pour éviter les problèmes de tests)
+_predict_service = None
 
 
-@router.post("/test")
+def get_predict_service():
+    """
+    Retourne l'instance du service de prédiction.
+    Utilise une initialisation paresseuse pour éviter les problèmes
+    lors des tests unitaires.
+    """
+    global _predict_service
+    if _predict_service is None:
+        from app.services.predict_service import PredictService
+        _predict_service = PredictService()
+    return _predict_service
+
+
+@router.post("/test", dependencies=[Depends(verify_api_key)])
 async def predict_test(request: dict):
-    """Test endpoint pour débugger"""
+    """
+    Endpoint de test pour le débogage et la validation des données.
+
+    Permet de vérifier la structure et les types de données envoyés par le client.
+    Utile pendant le développement pour s'assurer que les requêtes sont correctement formatées.
+
+    Args:
+        request (dict): Dictionnaire contenant les données de test à valider
+
+    Returns:
+        dict: Statut de la requête, données reçues et types de chaque champ
+    """
     return {"status": "ok", "received": request, "types": {k: str(type(v)) for k, v in request.items()}}
 
-@router.post("/raw", response_model=PredictResponse)
+@router.post("/raw", response_model=PredictResponse, dependencies=[Depends(verify_api_key)])
 async def predict_raw(request: Request):
-    """Test avec JSON brut"""
+    """
+    Endpoint de test acceptant du JSON brut sans validation de schéma.
+
+    Cet endpoint permet d'envoyer des données JSON directement sans passer par
+    la validation Pydantic. Utile pour tester des formats de données personnalisés
+    ou pour le débogage lorsque le schéma PredictRequest n'est pas adapté.
+
+    Args:
+        request (Request): Objet Request FastAPI contenant le JSON brut
+
+    Returns:
+        PredictResponse: Réponse de test formatée avec les informations de base
+
+    Raises:
+        HTTPException: Erreur 500 si le JSON ne peut être parsé ou traité
+    """
     try:
         import json
         body = await request.body()
         data = json.loads(body)
-        
+
         return PredictResponse(
             answer=f"Test réussi avec JSON brut! Collection: {list(data.get('collection', {}).keys())}",
             thought_process=["JSON brut reçu", f"User: {data.get('user_age')}"],
@@ -34,17 +74,46 @@ async def predict_raw(request: Request):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Erreur: {str(e)}")
 
-@router.post("/", response_model=PredictResponse)
+@router.post("/", response_model=PredictResponse, dependencies=[Depends(verify_api_key)])
 async def predict(request: PredictRequest):
     """
-    Endpoint pour effectuer des prédictions et recommandations personnalisées.
-    
-    Cette route utilise le profil utilisateur pour générer des recommandations
-    intelligentes ou répondre à des questions spécifiques sur les mangas/livres.
-    """
+    Endpoint principal pour les prédictions et recommandations personnalisées.
 
-    print("dd")
+    Cette route est le cœur du système de recommandation. Elle analyse le profil utilisateur
+    (âge, genre, préférences, humeur, collection personnelle) pour générer des recommandations
+    intelligentes de mangas et de livres en utilisant:
+    - La recherche vectorielle pour trouver des contenus similaires
+    - L'IA (OpenAI/Azure) pour personnaliser les réponses
+    - L'analyse de la collection existante de l'utilisateur
+
+    Le processus inclut:
+    1. Validation des données utilisateur via Pydantic
+    2. Recherche vectorielle dans la base de données Timescale Vector
+    3. Génération de recommandations personnalisées par IA
+    4. Formatage de la réponse avec détails et sources
+
+    Args:
+        request (PredictRequest): Objet contenant le profil complet de l'utilisateur
+            - user_age: Âge de l'utilisateur pour adapter les recommandations
+            - user_genre: Genre pour la personnalisation
+            - preferences: Préférences de lecture et centres d'intérêt
+            - mood: Humeur actuelle pour les recommandations contextuelles
+            - collection: Collection personnelle avec notes et commentaires
+
+    Returns:
+        PredictResponse: Réponse structurée contenant:
+            - serie_recomendees: Liste des recommandations détaillées
+            - answer: Réponse textuelle générée par IA
+            - thought_process: Détail du raisonnement de l'IA
+            - enough_context: Indicateur de suffisance d'information
+            - sources_count: Nombre de sources utilisées
+            - avg_similarity: Score de similarité moyen
+
+    Raises:
+        HTTPException: Erreur 500 en cas de problème lors du traitement de la prédiction
+    """
     try:
+        predict_service = get_predict_service()
         response = await predict_service.predict(request)
         return response
     except Exception as e:
@@ -54,6 +123,24 @@ async def predict(request: PredictRequest):
 @router.get("/health")
 async def health_check():
     """
-    Endpoint de vérification de santé pour le service de prédiction.
+    Endpoint de surveillance de l'état de santé du service de prédiction.
+
+    Utilisé pour le monitoring et le diagnostic du système. Cet endpoint
+    permet de vérifier rapidement si le service de prédiction est opérationnel
+    sans effectuer de traitement complexe.
+
+    Returns:
+        dict: Statut de santé du service
+            - status: "healthy" si le service fonctionne correctement
+            - service: Nom du service vérifié ("predict")
+
+    Usage:
+        GET /predict/health
+        Réponse typique: {"status": "healthy", "service": "predict"}
+
+    Monitoring:
+        - Intégrer avec des systèmes de monitoring pour les alertes
+        - Vérifier la disponibilité avant d'autres opérations
+        - Utiliser dans les load balancers pour health checks
     """
     return {"status": "healthy", "service": "predict"}
