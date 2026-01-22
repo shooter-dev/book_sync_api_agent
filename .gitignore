@@ -65,6 +65,9 @@ tableau_ccusage_mensuel*.md
 generate_monthly_ccusage.sh
 TESTS.md
 
+# Documentation
+doc/
+
 # Translations
 *.mo
 *.pot
