@@ -75,7 +75,6 @@ async def predict_raw(request: Request):
 async def predict(request: PredictRequest):
     """
     Endpoint principal pour les prédictions et recommandations personnalisées.
-
     Cette route est le cœur du système de recommandation. Elle analyse le profil utilisateur
     (âge, genre, préférences, humeur, collection personnelle) pour générer des recommandations
     intelligentes de mangas et de livres en utilisant:
