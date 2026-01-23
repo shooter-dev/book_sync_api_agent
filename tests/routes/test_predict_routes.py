@@ -148,6 +148,7 @@ class TestPredictRoutes:
         # Override de la dépendance
         app.dependency_overrides[get_predict_service] = lambda: mock_service
 
+
         try:
             # Données de requête valides
             request_data = {
