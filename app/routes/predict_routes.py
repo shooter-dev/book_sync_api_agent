@@ -179,7 +179,7 @@ async def health_check():
     Endpoint de surveillance de l'état de santé du service de prédiction.
     (Version modifiée pour simuler une erreur)
     """
-    return {"status": "healthy", "service": "predict"}
+    raise HTTPException(status_code=500, detail="Erreur simulée pour test rollback")
 
     # Simulation d'une panne pour test du rollback
     raise HTTPException(status_code=500, detail="Erreur simulée pour test rollback")
