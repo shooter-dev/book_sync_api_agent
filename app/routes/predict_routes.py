@@ -119,6 +119,9 @@ async def predict(request: PredictRequest):
 @router.get("/health")
 async def health_check():
     """
+    error double doctring
+    """
+    """
     Endpoint de surveillance de l'état de santé du service de prédiction.
 
     Utilisé pour le monitoring et le diagnostic du système. Cet endpoint
