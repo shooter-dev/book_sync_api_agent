@@ -91,7 +91,7 @@ async def predict_raw(request: Request):
 
 @router.post("/", response_model=PredictResponse, dependencies=[Depends(verify_api_key)])
 async def predict(request: PredictRequest):
-    """ 
+    """
     Endpoint principal pour les prédictions et recommandations personnalisées.
 
     Cette route est le cœur du système de recommandation. Elle analyse le profil utilisateur
@@ -159,4 +159,3 @@ async def health_check():
         - Utiliser dans les load balancers pour health checks
     """
    return {"status": "healthy", "service": "predict"}
-
