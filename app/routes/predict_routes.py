@@ -139,4 +139,5 @@ async def health_check():
         - Vérifier la disponibilité avant d'autres opérations
         - Utiliser dans les load balancers pour health checks
     """
-    return {"status": "healthy", "service": "predict"}
+    #return {"status": "healthy", "service": "predict"}
+    raise HTTPException(status_code=500, detail="Erreur simulée pour test rollback")
