@@ -1,13 +1,26 @@
+from typing import Annotated
+
+from fastapi import APIRouter, Depends, HTTPException, Request
+
 from fastapi import APIRouter, HTTPException, Request, Depends
 from app.models.predict_request import PredictRequest
 from app.models.predict_response import PredictResponse
+from app.services.predict_service import PredictService
+
+router = APIRouter(prefix="/predict", tags=["prediction"])
 from app.middleware.auth import verify_api_key
 
-router = APIRouter(
-    prefix="/predict",
-    tags=["prediction"]
-)
 
+def get_predict_service() -> PredictService:
+    """
+    Fonction de dépendance pour obtenir une instance de PredictService.
+
+    Permet l'injection de dépendances et facilite le mocking dans les tests.
+
+    Returns:
+        PredictService: Instance du service de prédiction
+    """
+    return PredictService()
 # Instance du service (initialisée de manière paresseuse pour éviter les problèmes de tests)
 _predict_service = None
 
@@ -41,6 +54,8 @@ async def predict_test(request: dict):
     """
     return {"status": "ok", "received": request, "types": {k: str(type(v)) for k, v in request.items()}}
 
+
+@router.post("/raw", response_model=PredictResponse)
 @router.post("/raw", response_model=PredictResponse, dependencies=[Depends(verify_api_key)])
 async def predict_raw(request: Request):
     """
@@ -61,6 +76,7 @@ async def predict_raw(request: Request):
     """
     try:
         import json
+
         body = await request.body()
         data = json.loads(body)
 
@@ -69,14 +85,30 @@ async def predict_raw(request: Request):
             thought_process=["JSON brut reçu", f"User: {data.get('user_age')}"],
             enough_context=True,
             sources_count=0,
-            avg_similarity=None
+            avg_similarity=None,
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Erreur: {str(e)}")
 
+
+@router.post("/", response_model=PredictResponse)
+async def predict(request: PredictRequest, predict_service: Annotated[PredictService, Depends(get_predict_service)]):
 @router.post("/", response_model=PredictResponse, dependencies=[Depends(verify_api_key)])
 async def predict(request: PredictRequest):
     """
+    Endpoint pour effectuer des prédictions et recommandations personnalisées.
+
+    Cette route utilise le profil utilisateur pour générer des recommandations
+    intelligentes ou répondre à des questions spécifiques sur les mangas/livres.
+
+    Args:
+        request: Requête contenant le profil utilisateur et les préférences
+        predict_service: Service de prédiction injecté automatiquement
+
+    Returns:
+        PredictResponse: Réponse contenant les recommandations et la réponse IA
+    """
+    """ 
     Endpoint principal pour les prédictions et recommandations personnalisées.
 
     Cette route est le cœur du système de recommandation. Elle analyse le profil utilisateur
@@ -151,5 +183,7 @@ async def health_check():
     Endpoint de surveillance de l'état de santé du service de prédiction.
     (Version modifiée pour simuler une erreur)
     """
+    return {"status": "healthy", "service": "predict"}
+
     # Simulation d'une panne pour test du rollback
     raise HTTPException(status_code=500, detail="Erreur simulée pour test rollback")

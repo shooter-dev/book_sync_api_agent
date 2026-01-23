@@ -1,15 +1,16 @@
 import logging
 import os
 from typing import List
-import pandas as pd
+
+from openai import AzureOpenAI, OpenAI
 from pydantic import BaseModel
 
 from app.config.settings import get_settings
-from openai import OpenAI, AzureOpenAI
 
 
 class SynthesizerResponse(BaseModel):
     """Modèle de réponse du Synthesizer."""
+
     answer: str
     thought_process: List[str]
     enough_context: bool
@@ -25,24 +26,24 @@ class Synthesizer:
         print("=== DEBUT generate_global_response ===")
         print(f"Séries recommandées: {len(recommended_series)}")
         print(f"Profil utilisateur: {user_profile.get('user_genre')} {user_profile.get('user_age')} ans")
-        
+
         try:
             settings = get_settings()
-            
+
             # Vérifier si Azure OpenAI doit être utilisé
             use_azure = os.getenv("USE_AZURE_OPENAI", "false").lower() == "true"
-            
+
             if use_azure:
                 client = AzureOpenAI(
                     api_key=settings.azure_openai.api_key,
                     api_version=settings.azure_openai.api_version,
-                    azure_endpoint=settings.azure_openai.azure_endpoint
+                    azure_endpoint=settings.azure_openai.azure_endpoint,
                 )
                 model = settings.azure_openai.default_model
             else:
                 client = OpenAI(api_key=settings.openai.api_key)
                 model = settings.openai.default_model
-            
+
             # Construire la liste des séries recommandées
             series_list = ""
             if recommended_series:
@@ -50,7 +51,7 @@ class Synthesizer:
                     series_list += f"{i}. {serie.title}\n"
             else:
                 series_list = "Aucune série trouvée dans la base de données."
-            
+
             # Prompt pour générer une réponse globale personnalisée
             prompt = f"""
 <Role_and_Objectives>
@@ -91,25 +92,20 @@ Generate a warm and personalized response (2–3 sentences max) that:
 
 Only return the response text, without JSON or additional structure.
 """
-            
-            print('--------------------------------------------------------------')
+
+            print("--------------------------------------------------------------")
             print(prompt)
-            print('--------------------------------------------------------------')
-            
+            print("--------------------------------------------------------------")
+
             response = client.chat.completions.create(
-                model=model,
-                messages=[
-                    {"role": "user", "content": prompt}
-                ],
-                temperature=0.7,
-                max_tokens=200
+                model=model, messages=[{"role": "user", "content": prompt}], temperature=0.7, max_tokens=200
             )
-            
+
             global_response = response.choices[0].message.content.strip()
             print(f"Réponse globale générée: {global_response}")
-            
+
             return global_response
-            
+
         except Exception as e:
             logging.error(f"Erreur lors de la génération de la réponse globale: {e}")
             return f"Voici mes recommandations basées sur votre profil {user_profile.get('user_genre')} de {user_profile.get('user_age')} ans avec des préférences pour le {user_profile.get('category_preference')}."

@@ -12,9 +12,7 @@ load_dotenv(dotenv_path="./.env")
 
 def setup_logging():
     """Configure la journalisation de base pour l'application."""
-    logging.basicConfig(
-        level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
-    )
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
 
 class LLMSettings(BaseModel):
@@ -40,7 +38,9 @@ class AzureOpenAISettings(LLMSettings):
     api_version: str = Field(default_factory=lambda: os.getenv("AZURE_OPENAI_VERSION", "2024-02-01"))
     azure_endpoint: str = Field(default_factory=lambda: os.getenv("AZURE_OPENAI_ENDPOINT"))
     default_model: str = Field(default_factory=lambda: os.getenv("AZURE_OPENAI_CHAT_DEPLOYMENT", "gpt-4"))
-    embedding_model: str = Field(default_factory=lambda: os.getenv("AZURE_OPENAI_EMBEDDING_DEPLOYMENT", "text-embedding-3-small"))
+    embedding_model: str = Field(
+        default_factory=lambda: os.getenv("AZURE_OPENAI_EMBEDDING_DEPLOYMENT", "text-embedding-3-small")
+    )
 
 
 class DatabaseSettings(BaseModel):

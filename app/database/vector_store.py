@@ -1,15 +1,15 @@
 import logging
-import time
-from typing import Any, List, Optional, Tuple, Union
-from datetime import datetime
 import os
+import time
+from datetime import datetime
+from typing import Any, List, Optional, Tuple, Union
 
 import pandas as pd
-import numpy as np
-from app.config.settings import get_settings
-from openai import OpenAI, AzureOpenAI
 import psycopg2
+from openai import AzureOpenAI, OpenAI
 from pgvector.psycopg2 import register_vector
+
+from app.config.settings import get_settings
 
 
 class VectorStore:
@@ -18,29 +18,29 @@ class VectorStore:
     def __init__(self):
         """Initialise le VectorStore avec les paramètres, le client OpenAI/Azure OpenAI et le client Timescale Vector."""
         self.settings = get_settings()
-        
+
         # Vérifier si Azure OpenAI doit être utilisé
         use_azure = os.getenv("USE_AZURE_OPENAI", "false").lower() == "true"
-        
+
         if use_azure:
             self.openai_client = AzureOpenAI(
                 api_key=self.settings.azure_openai.api_key,
                 api_version=self.settings.azure_openai.api_version,
-                azure_endpoint=self.settings.azure_openai.azure_endpoint
+                azure_endpoint=self.settings.azure_openai.azure_endpoint,
             )
             self.embedding_model = self.settings.azure_openai.embedding_model
         else:
             self.openai_client = OpenAI(api_key=self.settings.openai.api_key)
             self.embedding_model = self.settings.openai.embedding_model
-        
+
         self.vector_settings = self.settings.vector_store
         self.conn = psycopg2.connect(self.settings.database.service_url)
-        
+
         # Créer l'extension vector avant d'enregistrer le type
         with self.conn.cursor() as cur:
             cur.execute("CREATE EXTENSION IF NOT EXISTS vector")
             self.conn.commit()
-        
+
         register_vector(self.conn)
 
     def get_embedding(self, text: str) -> List[float]:
@@ -71,7 +71,8 @@ class VectorStore:
         """Crée les tables nécessaires dans la base de données"""
         with self.conn.cursor() as cur:
             cur.execute("CREATE EXTENSION IF NOT EXISTS vector")
-            cur.execute(f"""
+            cur.execute(
+                f"""
                 CREATE TABLE IF NOT EXISTS {self.vector_settings.table_name} (
                     id UUID PRIMARY KEY,
                     metadata JSONB,
@@ -79,17 +80,20 @@ class VectorStore:
                     embedding vector({self.vector_settings.embedding_dimensions}),
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
-            """)
+            """
+            )
             self.conn.commit()
 
     def create_index(self) -> None:
         """Crée un index HNSW pour accélérer la recherche de similarité"""
         with self.conn.cursor() as cur:
-            cur.execute(f"""
+            cur.execute(
+                f"""
                 CREATE INDEX IF NOT EXISTS {self.vector_settings.table_name}_embedding_idx 
                 ON {self.vector_settings.table_name} 
                 USING hnsw (embedding vector_cosine_ops)
-            """)
+            """
+            )
             self.conn.commit()
 
     def drop_index(self) -> None:
@@ -107,9 +111,11 @@ class VectorStore:
                 Colonnes attendues: id, metadata, contents, embedding
         """
         import json
+
         with self.conn.cursor() as cur:
             for _, row in df.iterrows():
-                cur.execute(f"""
+                cur.execute(
+                    f"""
                     INSERT INTO {self.vector_settings.table_name} 
                     (id, metadata, contents, embedding) 
                     VALUES (%s, %s, %s, %s)
@@ -117,16 +123,11 @@ class VectorStore:
                         metadata = EXCLUDED.metadata,
                         contents = EXCLUDED.contents,
                         embedding = EXCLUDED.embedding
-                """, (
-                    row['id'],
-                    json.dumps(row['metadata']),
-                    row['contents'],
-                    row['embedding']
-                ))
+                """,
+                    (row["id"], json.dumps(row["metadata"]), row["contents"], row["embedding"]),
+                )
             self.conn.commit()
-        logging.info(
-            f"Inserted {len(df)} records into {self.vector_settings.table_name}"
-        )
+        logging.info(f"Inserted {len(df)} records into {self.vector_settings.table_name}")
 
     def search(
         self,
@@ -160,37 +161,37 @@ class VectorStore:
         """
         query_embedding = self.get_embedding(query_text)
         start_time = time.time()
-        
+
         # Build SQL for fetching candidates without vector operations
         sql_query = f"SELECT id, metadata, contents, embedding FROM {self.vector_settings.table_name}"
         conditions = []
         params = []
-        
+
         if metadata_filter:
             if isinstance(metadata_filter, dict):
                 for key, value in metadata_filter.items():
-                    conditions.append(f"metadata ->> %s = %s")
+                    conditions.append("metadata ->> %s = %s")
                     params.extend([key, str(value)])
-        
+
         # Handle timescale-vector predicates
         if predicates:
             conditions.append(self._convert_predicates_to_sql(predicates, params))
-        
+
         if time_range:
             start_date, end_date = time_range
             conditions.append("created_at BETWEEN %s AND %s")
             params.extend([start_date, end_date])
-        
+
         if conditions:
             sql_query += " WHERE " + " AND ".join(conditions)
-        
-        # Add basic limit to avoid memory issues  
+
+        # Add basic limit to avoid memory issues
         sql_query += " LIMIT 1000"
-        
+
         with self.conn.cursor() as cur:
             cur.execute(sql_query, params)
             db_results = cur.fetchall()
-        
+
         # Compute similarities in Python
         similarities = []
         for row in db_results:
@@ -200,11 +201,11 @@ class VectorStore:
                 dot_product = sum(a * b for a, b in zip(query_embedding, db_embedding))
                 norm_a = sum(a * a for a in query_embedding) ** 0.5
                 norm_b = sum(b * b for b in db_embedding) ** 0.5
-                
+
                 if norm_a > 0 and norm_b > 0:
                     similarity = dot_product / (norm_a * norm_b)
                     similarities.append((row + (similarity,)))
-        
+
         # Sort by similarity (descending) and limit results
         similarities.sort(key=lambda x: x[4], reverse=True)
         results = similarities[:limit]
@@ -219,32 +220,25 @@ class VectorStore:
 
     def _convert_predicates_to_sql(self, predicates, params: list) -> str:
         """Convert timescale-vector predicates to SQL WHERE conditions."""
-        if hasattr(predicates, 'field') and hasattr(predicates, 'operator') and hasattr(predicates, 'value'):
+        if hasattr(predicates, "field") and hasattr(predicates, "operator") and hasattr(predicates, "value"):
             # Simple predicate
             field = predicates.field
             operator = predicates.operator
             value = predicates.value
-            
+
             # Map operators
-            op_mapping = {
-                "==": "=",
-                "!=": "!=", 
-                ">": ">",
-                ">=": ">=",
-                "<": "<",
-                "<=": "<="
-            }
-            
+            op_mapping = {"==": "=", "!=": "!=", ">": ">", ">=": ">=", "<": "<", "<=": "<="}
+
             sql_op = op_mapping.get(operator, "=")
             params.extend([field, str(value)])
             return f"metadata ->> %s {sql_op} %s"
-        
-        elif hasattr(predicates, '__or__') or hasattr(predicates, '__and__'):
+
+        elif hasattr(predicates, "__or__") or hasattr(predicates, "__and__"):
             # Compound predicate - this is simplified, full implementation would need more logic
             # For now, return a basic condition for genre
-            params.extend(['genre', 'Manga'])
+            params.extend(["genre", "Manga"])
             return "metadata ->> %s = %s"
-        
+
         return ""
 
     def _create_dataframe_from_results(
@@ -262,15 +256,13 @@ class VectorStore:
         """
         if not results:
             return pd.DataFrame()
-            
+
         # Convertir les résultats en DataFrame
-        df = pd.DataFrame(
-            results, columns=["id", "metadata", "content", "embedding", "similarity"]
-        )
+        df = pd.DataFrame(results, columns=["id", "metadata", "content", "embedding", "similarity"])
 
         # Étendre la colonne metadata
-        metadata_df = pd.json_normalize(df['metadata'])
-        df = pd.concat([df.drop(['metadata'], axis=1), metadata_df], axis=1)
+        metadata_df = pd.json_normalize(df["metadata"])
+        df = pd.concat([df.drop(["metadata"], axis=1), metadata_df], axis=1)
 
         # Convertir l'id en chaîne pour une meilleure lisibilité
         df["id"] = df["id"].astype(str)
@@ -304,27 +296,25 @@ class VectorStore:
                 vector_store.delete(delete_all=True)
         """
         if sum(bool(x) for x in (ids, metadata_filter, delete_all)) != 1:
-            raise ValueError(
-                "Provide exactly one of: ids, metadata_filter, or delete_all"
-            )
+            raise ValueError("Provide exactly one of: ids, metadata_filter, or delete_all")
 
         with self.conn.cursor() as cur:
             if delete_all:
                 cur.execute(f"DELETE FROM {self.vector_settings.table_name}")
                 logging.info(f"Deleted all records from {self.vector_settings.table_name}")
             elif ids:
-                placeholders = ','.join(['%s'] * len(ids))
+                placeholders = ",".join(["%s"] * len(ids))
                 cur.execute(f"DELETE FROM {self.vector_settings.table_name} WHERE id IN ({placeholders})", ids)
                 logging.info(f"Deleted {len(ids)} records from {self.vector_settings.table_name}")
             elif metadata_filter:
                 conditions = []
                 params = []
                 for key, value in metadata_filter.items():
-                    conditions.append(f"metadata ->> %s = %s")
+                    conditions.append("metadata ->> %s = %s")
                     params.extend([key, value])
-                
+
                 where_clause = " AND ".join(conditions)
                 cur.execute(f"DELETE FROM {self.vector_settings.table_name} WHERE {where_clause}", params)
                 logging.info(f"Deleted records matching metadata filter from {self.vector_settings.table_name}")
-            
+
             self.conn.commit()
