@@ -5,6 +5,7 @@ Ce module teste les endpoints de l'API de prédiction.
 """
 
 from unittest.mock import AsyncMock, MagicMock
+import os
 
 from fastapi.testclient import TestClient
 
@@ -13,6 +14,12 @@ from app.models.predict_request import PredictRequest
 from app.models.predict_response import PredictResponse, RecommendedSerie
 from app.routes.predict_routes import get_predict_service
 from app.services.predict_service import PredictService
+
+client = TestClient(app)
+
+# Ajout d'une variable globale pour le header d'API key
+# Cette valeur doit correspondre a celle definie dans conftest.py
+API_KEY_HEADERS = {"X-API-Key": "test-api-key-12345"}
 
 
 def create_mock_predict_service():
@@ -26,16 +33,12 @@ def create_mock_predict_service():
     return mock_service
 
 
-client = TestClient(app)
-
-
 class TestPredictRoutes:
     """Tests pour les routes de prédiction."""
 
     def test_health_check(self):
         """Test l'endpoint de health check."""
-        headers = {"x-api-key": "azerty@&123"}
-        response = client.get("/predict/health", headers=headers)
+        response = client.get("/predict/health", headers=API_KEY_HEADERS)
 
         # Assertions
         assert response.status_code == 200
@@ -45,10 +48,9 @@ class TestPredictRoutes:
         """Test l'endpoint de test /predict/test."""
         # Données de test
         test_data = {"user_age": "25", "user_genre": "Homme", "category_preference": "Action"}
-        headers = {"x-api-key": "azerty@&123"}
 
         # Exécution
-        response = client.post("/predict/test", json=test_data, headers=headers)
+        response = client.post("/predict/test", json=test_data, headers=API_KEY_HEADERS)
 
         # Assertions
         assert response.status_code == 200
@@ -92,8 +94,7 @@ class TestPredictRoutes:
                 "read": {},
                 "user_mood": "Énervé",
             }
-            headers = {"x-api-key": "azerty@&123"}
-            response = client.post("/predict/", json=request_data, headers=headers)
+            response = client.post("/predict/", json=request_data, headers=API_KEY_HEADERS)
 
             # Assertions
             assert response.status_code == 200
@@ -122,8 +123,7 @@ class TestPredictRoutes:
                 "collection": {},
                 "read": {},
             }
-            headers = {"x-api-key": "azerty@&123"}
-            response = client.post("/predict/", json=request_data, headers=headers)
+            response = client.post("/predict/", json=request_data, headers=API_KEY_HEADERS)
 
             # Assertions - devrait échouer avec une erreur de validation
             assert response.status_code == 422
@@ -162,8 +162,7 @@ class TestPredictRoutes:
                 "read": {},
                 "user_mood": "Calme",
             }
-            headers = {"x-api-key": "azerty@&123"}
-            response = client.post("/predict/", json=request_data, headers=headers)
+            response = client.post("/predict/", json=request_data, headers=API_KEY_HEADERS)
 
             # Assertions
             assert response.status_code == 500
@@ -207,8 +206,7 @@ class TestPredictRoutes:
                 "read": {"Naruto": {"volumes": {"1": "uuid-3"}, "id_series": "series-uuid-2"}},
                 "user_mood": "Comique",
             }
-            headers = {"x-api-key": "azerty@&123"}
-            response = client.post("/predict/", json=request_data, headers=headers)
+            response = client.post("/predict/", json=request_data, headers=API_KEY_HEADERS)
 
             # Assertions
             assert response.status_code == 200
@@ -263,9 +261,8 @@ class TestPredictRoutes:
                 "read": {},
                 "user_mood": "Calme",
             }
-            headers = {"x-api-key": "azerty@&123"}
             request_recommendation = {**base_request, "prediction_type": "recommendation"}
-            response_rec = client.post("/predict/", json=request_recommendation, headers=headers)
+            response_rec = client.post("/predict/", json=request_recommendation, headers=API_KEY_HEADERS)
             assert response_rec.status_code == 200
             assert response_rec.json()["status"] == "success"
 
@@ -278,7 +275,7 @@ class TestPredictRoutes:
 
             # Test avec collection
             request_collection = {**base_request, "prediction_type": "collection"}
-            response_coll = client.post("/predict/", json=request_collection, headers=headers)
+            response_coll = client.post("/predict/", json=request_collection, headers=API_KEY_HEADERS)
             assert response_coll.status_code == 200
             assert response_coll.json()["status"] == "success"
 
@@ -327,12 +324,11 @@ class TestPredictRoutes:
                 "collection": {},
                 "read": {},
             }
-            headers = {"x-api-key": "azerty@&123"}
             moods = ["Énervé", "Comique", "Triste", "Joyeux", "Calme", "Anxieux"]
             for mood in moods:
                 mock_service.predict.reset_mock()
                 request_with_mood = {**base_request, "user_mood": mood}
-                response = client.post("/predict/", json=request_with_mood, headers=headers)
+                response = client.post("/predict/", json=request_with_mood, headers=API_KEY_HEADERS)
 
                 # Assertions
                 assert response.status_code == 200, f"Échec avec l'humeur: {mood}"
@@ -385,12 +381,11 @@ class TestPredictRoutes:
                 "read": {},
                 "user_mood": "Calme",
             }
-            headers = {"x-api-key": "azerty@&123"}
             categories = ["Action", "Romance", "Horror", "Comedy", "Drama", "Fantasy"]
             for category in categories:
                 mock_service.predict.reset_mock()
                 request_with_category = {**base_request, "category_preference": category}
-                response = client.post("/predict/", json=request_with_category, headers=headers)
+                response = client.post("/predict/", json=request_with_category, headers=API_KEY_HEADERS)
 
                 # Assertions
                 assert response.status_code == 200, f"Échec avec la catégorie: {category}"
@@ -434,8 +429,7 @@ class TestPredictRoutes:
                 "read": {},
                 "user_mood": "Calme",
             }
-            headers = {"x-api-key": "azerty@&123"}
-            response = client.post("/predict/", json=request_data, headers=headers)
+            response = client.post("/predict/", json=request_data, headers=API_KEY_HEADERS)
 
             # Assertions
             assert response.status_code == 200
@@ -481,8 +475,7 @@ class TestPredictRoutes:
                 "read": {},
                 "user_mood": "Énervé",
             }
-            headers = {"x-api-key": "azerty@&123"}
-            response = client.post("/predict/", json=request_data, headers=headers)
+            response = client.post("/predict/", json=request_data, headers=API_KEY_HEADERS)
 
             # Assertions
             assert response.status_code == 200
@@ -534,8 +527,7 @@ class TestPredictRoutes:
                 "read": {},
                 "user_mood": "Calme",
             }
-            headers = {"x-api-key": "azerty@&123"}
-            response = client.post("/predict/", json=valid_age_request, headers=headers)
+            response = client.post("/predict/", json=valid_age_request, headers=API_KEY_HEADERS)
             assert response.status_code == 200
 
             # Test avec un âge invalide (doit quand même passer car c'est une chaîne)
@@ -550,7 +542,7 @@ class TestPredictRoutes:
                 "read": {},
                 "user_mood": "Calme",
             }
-            response = client.post("/predict/", json=invalid_age_request, headers=headers)
+            response = client.post("/predict/", json=invalid_age_request, headers=API_KEY_HEADERS)
             assert response.status_code == 200
 
             # Vérifier que le service a été appelé deux fois
@@ -595,7 +587,6 @@ class TestPredictRoutes:
                 "read": {},
                 "user_mood": "Calme",
             }
-            headers = {"x-api-key": "azerty@&123"}
             responses = []
             for i in range(3):
                 # Créer une copie des données avec un ID unique
@@ -603,7 +594,7 @@ class TestPredictRoutes:
                 req_data["user_comment"] = f"Requête {i+1}"
 
                 # Exécuter la requête
-                response = client.post("/predict/", json=req_data, headers=headers)
+                response = client.post("/predict/", json=req_data, headers=API_KEY_HEADERS)
                 responses.append(response)
 
             # Vérifie que toutes les requêtes ont réussi
