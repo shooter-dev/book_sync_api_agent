@@ -72,44 +72,48 @@ async def predict_raw(request: Request):
 
 
 @router.post("/", response_model=PredictResponse, dependencies=[Depends(verify_api_key)])
-async def predict(request: PredictRequest):
+async def predict(
+    request: PredictRequest,
+    predict_service: PredictService = Depends(get_predict_service)
+):
     """
-    Endpoint principal pour les prédictions et recommandations personnalisées.
-    Cette route est le cœur du système de recommandation. Elle analyse le profil utilisateur
-    (âge, genre, préférences, humeur, collection personnelle) pour générer des recommandations
+    Endpoint principal pour les predictions et recommandations personnalisees.
+
+    Cette route est le coeur du systeme de recommandation. Elle analyse le profil utilisateur
+    (age, genre, preferences, humeur, collection personnelle) pour generer des recommandations
     intelligentes de mangas et de livres en utilisant:
     - La recherche vectorielle pour trouver des contenus similaires
-    - L'IA (OpenAI/Azure) pour personnaliser les réponses
+    - L'IA (OpenAI/Azure) pour personnaliser les reponses
     - L'analyse de la collection existante de l'utilisateur
 
     Le processus inclut:
-    1. Validation des données utilisateur via Pydantic
-    2. Recherche vectorielle dans la base de données Timescale Vector
-    3. Génération de recommandations personnalisées par IA
-    4. Formatage de la réponse avec détails et sources
+    1. Validation des donnees utilisateur via Pydantic
+    2. Recherche vectorielle dans la base de donnees Timescale Vector
+    3. Generation de recommandations personnalisees par IA
+    4. Formatage de la reponse avec details et sources
 
     Args:
         request (PredictRequest): Objet contenant le profil complet de l'utilisateur
-            - user_age: Âge de l'utilisateur pour adapter les recommandations
+            - user_age: Age de l'utilisateur pour adapter les recommandations
             - user_genre: Genre pour la personnalisation
-            - preferences: Préférences de lecture et centres d'intérêt
+            - preferences: Preferences de lecture et centres d'interet
             - mood: Humeur actuelle pour les recommandations contextuelles
             - collection: Collection personnelle avec notes et commentaires
+        predict_service (PredictService): Service de prediction injecte via Depends
 
     Returns:
-        PredictResponse: Réponse structurée contenant:
-            - serie_recomendees: Liste des recommandations détaillées
-            - answer: Réponse textuelle générée par IA
-            - thought_process: Détail du raisonnement de l'IA
+        PredictResponse: Reponse structuree contenant:
+            - serie_recomendees: Liste des recommandations detaillees
+            - answer: Reponse textuelle generee par IA
+            - thought_process: Detail du raisonnement de l'IA
             - enough_context: Indicateur de suffisance d'information
-            - sources_count: Nombre de sources utilisées
-            - avg_similarity: Score de similarité moyen
+            - sources_count: Nombre de sources utilisees
+            - avg_similarity: Score de similarite moyen
 
     Raises:
-        HTTPException: Erreur 500 en cas de problème lors du traitement de la prédiction
+        HTTPException: Erreur 500 en cas de probleme lors du traitement de la prediction
     """
     try:
-        predict_service = get_predict_service()
         response = await predict_service.predict(request)
         return response
     except Exception as e:

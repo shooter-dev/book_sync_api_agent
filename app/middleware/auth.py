@@ -9,6 +9,8 @@ from fastapi import HTTPException, Security, status
 from fastapi.security import APIKeyHeader
 import os
 
+print('DEBUG API_KEY (middleware):', os.getenv('API_KEY'))
+
 # Configuration de l'en-tête pour la clé API
 api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
 

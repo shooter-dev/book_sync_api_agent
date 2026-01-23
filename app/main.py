@@ -1,6 +1,11 @@
+from dotenv import load_dotenv
+load_dotenv()
+
 from fastapi import FastAPI
 from prometheus_fastapi_instrumentator import Instrumentator
+
 from .routes.predict_routes import router as predict_router
+
 
 app = FastAPI(
     title="Book Sync API Agent",
