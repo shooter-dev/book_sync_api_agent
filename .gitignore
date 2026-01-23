@@ -67,6 +67,8 @@ TESTS.md
 
 # Documentation
 doc/
+docs/rapport/COMPTERENDU_BACKEND.md
+docs/rapport/RAPPORT_E3_MISE_EN_SITUATION.md
 
 # Translations
 *.mo

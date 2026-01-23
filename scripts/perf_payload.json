@@ -1,0 +1,12 @@
+{
+  "user_age": "25",
+  "user_genre": "Homme",
+  "genre_preference": "Global Manga",
+  "category_preference": "Action",
+  "prediction_type": "recommendation",
+  "user_mood": "Je veux quelque chose d'excitant",
+  "collection": {},
+  "read": {}
+}
+
+// Ce fichier est à supprimer (voir docs/_A_SUPPRIMER.txt)
