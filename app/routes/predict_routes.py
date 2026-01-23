@@ -116,8 +116,8 @@ async def predict(request: PredictRequest):
         raise HTTPException(status_code=500, detail=f"Erreur lors de la prédiction: {str(e)}")
 
 
-@router.get("/health")
-async def health_check():
+#@router.get("/health")
+#async def health_check():
     """
     Endpoint de surveillance de l'état de santé du service de prédiction.
 
@@ -138,6 +138,14 @@ async def health_check():
         - Intégrer avec des systèmes de monitoring pour les alertes
         - Vérifier la disponibilité avant d'autres opérations
         - Utiliser dans les load balancers pour health checks
+    """
+    #return {"status": "healthy", "service": "predict"}
+
+@router.get("/health")
+async def health_check():
+    """
+    Endpoint de surveillance de l'état de santé du service de prédiction.
+    ... (docstring)
     """
     #return {"status": "healthy", "service": "predict"}
     raise HTTPException(status_code=500, detail="Erreur simulée pour test rollback")
