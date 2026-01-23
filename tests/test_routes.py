@@ -94,23 +94,36 @@ class TestPredictMainEndpoint:
     """Tests pour l'endpoint principal /predict/."""
 
     def test_predict_without_auth(self):
-        """Test que l'endpoint principal nécessite une authentification."""
+        """Test que l'endpoint principal necessite une authentification."""
         response = client.post("/predict/", json={})
         assert response.status_code == 401
 
     def test_predict_with_invalid_request(self):
-        """Test que l'endpoint refuse une requête invalide."""
-        response = client.post(
-            "/predict/",
-            json={"invalid": "data"},
-            headers={"X-API-Key": "test-api-key-12345"}
-        )
-        # Devrait retourner 422 car les champs requis manquent
-        assert response.status_code == 422
+        """Test que l'endpoint refuse une requete invalide."""
+        # Import de la fonction de dependance pour l'override
+        from app.routes.predict_routes import get_predict_service
 
-    @patch("app.routes.predict_routes.get_predict_service")
-    def test_predict_with_valid_request(self, mock_get_service, sample_predict_request):
-        """Test que l'endpoint fonctionne avec une requête valide."""
+        # Creation d'un mock du service pour eviter la connexion DB
+        mock_service = MagicMock()
+        app.dependency_overrides[get_predict_service] = lambda: mock_service
+
+        try:
+            response = client.post(
+                "/predict/",
+                json={"invalid": "data"},
+                headers={"X-API-Key": "test-api-key-12345"}
+            )
+            # Devrait retourner 422 car les champs requis manquent
+            assert response.status_code == 422
+        finally:
+            # Nettoyage de l'override
+            app.dependency_overrides.clear()
+
+    def test_predict_with_valid_request(self, sample_predict_request):
+        """Test que l'endpoint fonctionne avec une requete valide."""
+        # Import de la fonction de dependance pour l'override
+        from app.routes.predict_routes import get_predict_service
+
         # Configurer le mock du service
         mock_service = MagicMock()
         mock_response = MagicMock()
@@ -119,16 +132,20 @@ class TestPredictMainEndpoint:
         mock_response.responce_IA_global = "Test response"
 
         mock_service.predict = AsyncMock(return_value=mock_response)
-        mock_get_service.return_value = mock_service
+        app.dependency_overrides[get_predict_service] = lambda: mock_service
 
-        response = client.post(
-            "/predict/",
-            json=sample_predict_request,
-            headers={"X-API-Key": "test-api-key-12345"}
-        )
+        try:
+            response = client.post(
+                "/predict/",
+                json=sample_predict_request,
+                headers={"X-API-Key": "test-api-key-12345"}
+            )
 
-        # On vérifie juste que la requête est traitée
-        assert response.status_code in [200, 500]
+            # On verifie juste que la requete est traitee
+            assert response.status_code in [200, 500]
+        finally:
+            # Nettoyage de l'override
+            app.dependency_overrides.clear()
 
 
 class TestMetricsEndpoint:
