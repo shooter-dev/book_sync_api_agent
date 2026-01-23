@@ -1,10 +1,11 @@
 import logging
-from typing import List
+from typing import Optional, Dict, Any, List
 
 from app.database.vector_store import VectorStore
 from app.models.predict_request import PredictRequest
 from app.models.predict_response import PredictResponse, RecommendedSerie
 from app.services.synthesizer import Synthesizer
+from app.metrics.llm_metrics import metrics_collector
 
 
 class PredictService:
@@ -160,7 +161,15 @@ class PredictService:
     async def predict(self, request: PredictRequest) -> PredictResponse:
         """
         Effectue une prédiction basée sur le profil utilisateur et ses préférences.
+
+        Cette méthode utilise le collecteur de métriques LLMOps pour surveiller:
+        - La latence des requêtes
+        - Le nombre de résultats de recherche vectorielle
+        - Les erreurs éventuelles
         """
+        # Démarrer le chronomètre pour mesurer la latence (métriques LLMOps)
+        metrics_collector.start_request()
+
         try:
             print("=== DEBUT PREDICT SERVICE ===")
             print(f"Profil: {request.user_genre} {request.user_age} ans")
@@ -172,9 +181,23 @@ class PredictService:
             search_results = self._search_similar_volumes(request, limit=10)
             print(f"Résultats trouvés: {len(search_results)}")
 
+
+            # Enregistrer les métriques de recherche vectorielle
+            metrics_collector.record_vector_search(
+                success=not search_results.empty,
+                results_count=len(search_results)
+            )
+
             # Extraire les séries recommandées
             recommended_series = self._extract_series_recommendations(search_results, request)
             print(f"Séries extraites: {len(recommended_series)}")
+
+
+            # Générer la réponse globale via l'agent IA
+            if search_results.empty:
+                context_text = "Aucun contexte spécifique trouvé."
+            else:
+                context_text = "Recommandations basées sur votre profil et vos préférences."
 
             # Préparer le profil pour l'agent
             user_profile = {
@@ -192,6 +215,10 @@ class PredictService:
             synthesizer_response = self.synthesizer.generate_global_response(
                 recommended_series=recommended_series, user_profile=user_profile
             )
+
+
+            # Enregistrer le succès de la requête (métriques LLMOps)
+            metrics_collector.end_request(success=True)
 
             return PredictResponse(
                 serie_recomendees=recommended_series, status="success", responce_IA_global=synthesizer_response

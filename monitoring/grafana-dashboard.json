@@ -1,0 +1,199 @@
+{
+  "__comment__": "=== DASHBOARD GRAFANA POUR LLMOPS - BOOK SYNC API ===",
+  "__comment2__": "Ce fichier définit un dashboard Grafana pour visualiser les métriques LLMOps",
+  "__comment3__": "Import: Grafana > Dashboards > Import > Upload JSON file",
+
+  "annotations": {
+    "list": []
+  },
+  "title": "Book Sync API - LLMOps Dashboard",
+  "uid": "booksync-llmops",
+  "version": 1,
+  "timezone": "browser",
+  "refresh": "10s",
+
+  "panels": [
+    {
+      "__comment__": "Panel 1: Nombre total de requêtes",
+      "title": "Requêtes de Prédiction",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 0 },
+      "targets": [
+        {
+          "expr": "sum(prediction_requests_total)",
+          "legendFormat": "Total"
+        }
+      ],
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area"
+      }
+    },
+    {
+      "__comment__": "Panel 2: Taux de succès",
+      "title": "Taux de Succès",
+      "type": "gauge",
+      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 0 },
+      "targets": [
+        {
+          "expr": "sum(prediction_requests_total{status='success'}) / sum(prediction_requests_total) * 100",
+          "legendFormat": "Succès %"
+        }
+      ],
+      "options": {
+        "minValue": 0,
+        "maxValue": 100,
+        "thresholds": {
+          "mode": "absolute",
+          "steps": [
+            { "value": 0, "color": "red" },
+            { "value": 80, "color": "yellow" },
+            { "value": 95, "color": "green" }
+          ]
+        }
+      }
+    },
+    {
+      "__comment__": "Panel 3: Latence P95",
+      "title": "Latence P95 (secondes)",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 0 },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(llm_request_latency_seconds_bucket[5m])) by (le))",
+          "legendFormat": "P95"
+        }
+      ],
+      "options": {
+        "colorMode": "value",
+        "thresholds": {
+          "mode": "absolute",
+          "steps": [
+            { "value": 0, "color": "green" },
+            { "value": 3, "color": "yellow" },
+            { "value": 10, "color": "red" }
+          ]
+        }
+      }
+    },
+    {
+      "__comment__": "Panel 4: Coût total estimé",
+      "title": "Coût Total Estimé ($)",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 0 },
+      "targets": [
+        {
+          "expr": "llm_estimated_cost_dollars_sum",
+          "legendFormat": "Coût $"
+        }
+      ],
+      "options": {
+        "unit": "currencyUSD"
+      }
+    },
+    {
+      "__comment__": "Panel 5: Graphique de latence dans le temps",
+      "title": "Latence des Requêtes LLM",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 4 },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.50, sum(rate(llm_request_latency_seconds_bucket[5m])) by (le))",
+          "legendFormat": "P50 (médiane)"
+        },
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(llm_request_latency_seconds_bucket[5m])) by (le))",
+          "legendFormat": "P95"
+        },
+        {
+          "expr": "histogram_quantile(0.99, sum(rate(llm_request_latency_seconds_bucket[5m])) by (le))",
+          "legendFormat": "P99"
+        }
+      ],
+      "options": {
+        "legend": { "displayMode": "list" }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        }
+      }
+    },
+    {
+      "__comment__": "Panel 6: Tokens consommés",
+      "title": "Tokens Consommés par Heure",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 4 },
+      "targets": [
+        {
+          "expr": "increase(llm_tokens_consumed_total{type='prompt'}[1h])",
+          "legendFormat": "Tokens Prompt"
+        },
+        {
+          "expr": "increase(llm_tokens_consumed_total{type='completion'}[1h])",
+          "legendFormat": "Tokens Completion"
+        }
+      ]
+    },
+    {
+      "__comment__": "Panel 7: Débit de requêtes",
+      "title": "Débit de Requêtes (req/min)",
+      "type": "timeseries",
+      "gridPos": { "h": 6, "w": 12, "x": 0, "y": 12 },
+      "targets": [
+        {
+          "expr": "sum(rate(prediction_requests_total{status='success'}[5m])) * 60",
+          "legendFormat": "Succès"
+        },
+        {
+          "expr": "sum(rate(prediction_requests_total{status='error'}[5m])) * 60",
+          "legendFormat": "Erreurs"
+        }
+      ]
+    },
+    {
+      "__comment__": "Panel 8: Score de similarité",
+      "title": "Score de Similarité Vectorielle",
+      "type": "gauge",
+      "gridPos": { "h": 6, "w": 6, "x": 12, "y": 12 },
+      "targets": [
+        {
+          "expr": "vector_similarity_score",
+          "legendFormat": "Similarité"
+        }
+      ],
+      "options": {
+        "minValue": 0,
+        "maxValue": 1,
+        "thresholds": {
+          "mode": "absolute",
+          "steps": [
+            { "value": 0, "color": "red" },
+            { "value": 0.5, "color": "yellow" },
+            { "value": 0.7, "color": "green" }
+          ]
+        }
+      }
+    },
+    {
+      "__comment__": "Panel 9: Erreurs par type",
+      "title": "Erreurs par Type",
+      "type": "piechart",
+      "gridPos": { "h": 6, "w": 6, "x": 18, "y": 12 },
+      "targets": [
+        {
+          "expr": "sum(llm_errors_total) by (error_type)",
+          "legendFormat": "{{error_type}}"
+        }
+      ]
+    }
+  ],
+
+  "templating": {
+    "list": []
+  },
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  }
+}

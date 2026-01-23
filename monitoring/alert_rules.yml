@@ -1,0 +1,29 @@
+groups:
+- name: booksync_alerts
+  rules:
+  - alert: HighLLMLatency
+    expr: llm_request_latency_seconds_bucket{le="5.0"} > 10
+    for: 2m
+    labels:
+      severity: warning
+    annotations:
+      summary: "Latence élevée sur les requêtes LLM (>5s)"
+      description: "Plus de 10 requêtes LLM ont une latence supérieure à 5 secondes sur les 2 dernières minutes."
+
+  - alert: PredictionErrors
+    expr: increase(llm_errors_total[5m]) > 5
+    for: 1m
+    labels:
+      severity: critical
+    annotations:
+      summary: "Trop d'erreurs de prédiction"
+      description: "Plus de 5 erreurs de prédiction sur les 5 dernières minutes."
+
+  - alert: VectorSearchFailures
+    expr: increase(vector_searches_total{status="error"}[5m]) > 3
+    for: 1m
+    labels:
+      severity: critical
+    annotations:
+      summary: "Échecs de recherche vectorielle"
+      description: "Plus de 3 recherches vectorielles ont échoué sur les 5 dernières minutes."

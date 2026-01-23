@@ -1,0 +1,80 @@
+# =============================================================================
+# CONFIGURATION PROMETHEUS POUR LLMOPS - BOOK SYNC API
+# =============================================================================
+#
+# Ce fichier configure Prometheus pour collecter les métriques de l'API.
+#
+# UTILISATION:
+# 1. Installer Prometheus: docker pull prom/prometheus
+# 2. Lancer avec ce fichier: docker run -p 9090:9090 -v $(pwd)/prometheus.yml:/etc/prometheus/prometheus.yml prom/prometheus
+# 3. Accéder à Prometheus: http://localhost:9090
+#
+# =============================================================================
+
+global:
+  # Intervalle de collecte des métriques (toutes les 15 secondes)
+  scrape_interval: 15s
+
+  # Intervalle d'évaluation des règles d'alerte
+  evaluation_interval: 15s
+
+# Configuration des cibles à surveiller
+scrape_configs:
+  # Job pour l'API Book Sync
+  - job_name: 'booksync-api'
+
+    # URL de l'endpoint /metrics de l'API FastAPI
+    # En local: http://localhost:3000/metrics
+    # En production: http://api-booksync.azurecontainerapps.io/metrics
+    static_configs:
+      - targets: ['localhost:3000']
+        labels:
+          environment: 'development'
+          service: 'booksync-api'
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: ['localhost:9093']
+
+rule_files:
+  - 'alert_rules.yml'
+
+# =============================================================================
+# MÉTRIQUES LLMOPS DISPONIBLES
+# =============================================================================
+#
+# Après avoir configuré Prometheus, vous pouvez interroger ces métriques:
+#
+# 1. REQUÊTES DE PRÉDICTION:
+#    - prediction_requests_total{status="success"}  -> Nombre de requêtes réussies
+#    - prediction_requests_total{status="error"}    -> Nombre de requêtes échouées
+#    - rate(prediction_requests_total[5m])          -> Débit de requêtes par seconde
+#
+# 2. LATENCE LLM:
+#    - llm_request_latency_seconds_bucket           -> Distribution des latences
+#    - histogram_quantile(0.95, llm_request_latency_seconds_bucket) -> P95
+#    - histogram_quantile(0.99, llm_request_latency_seconds_bucket) -> P99
+#
+# 3. TOKENS CONSOMMÉS:
+#    - llm_tokens_consumed_total{type="prompt"}     -> Tokens en entrée
+#    - llm_tokens_consumed_total{type="completion"} -> Tokens en sortie
+#    - increase(llm_tokens_consumed_total[1h])      -> Tokens consommés par heure
+#
+# 4. COÛTS ESTIMÉS:
+#    - llm_estimated_cost_dollars_sum               -> Coût total estimé
+#    - llm_estimated_cost_dollars_count             -> Nombre de requêtes
+#
+# 5. QUALITÉ (SIMILARITÉ):
+#    - vector_similarity_score                      -> Score de similarité actuel
+#
+# 6. ERREURS:
+#    - llm_errors_total{error_type="timeout"}       -> Erreurs timeout
+#    - llm_errors_total{error_type="rate_limit"}    -> Erreurs rate limit
+#    - rate(llm_errors_total[5m])                   -> Taux d'erreur
+#
+# 7. RECHERCHES VECTORIELLES:
+#    - vector_searches_total{status="success"}      -> Recherches réussies
+#    - vector_results_count_bucket                  -> Distribution des résultats
+#
+# =============================================================================
