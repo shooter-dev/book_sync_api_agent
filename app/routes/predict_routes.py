@@ -55,7 +55,6 @@ async def predict_test(request: dict):
     return {"status": "ok", "received": request, "types": {k: str(type(v)) for k, v in request.items()}}
 
 
-@router.post("/raw", response_model=PredictResponse)
 @router.post("/raw", response_model=PredictResponse, dependencies=[Depends(verify_api_key)])
 async def predict_raw(request: Request):
     """
@@ -90,9 +89,6 @@ async def predict_raw(request: Request):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Erreur: {str(e)}")
 
-
-@router.post("/", response_model=PredictResponse)
-async def predict(request: PredictRequest, predict_service: Annotated[PredictService, Depends(get_predict_service)]):
 @router.post("/", response_model=PredictResponse, dependencies=[Depends(verify_api_key)])
 async def predict(request: PredictRequest):
     """
