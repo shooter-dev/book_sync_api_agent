@@ -91,19 +91,6 @@ async def predict_raw(request: Request):
 
 @router.post("/", response_model=PredictResponse, dependencies=[Depends(verify_api_key)])
 async def predict(request: PredictRequest):
-    """
-    Endpoint pour effectuer des prédictions et recommandations personnalisées.
-
-    Cette route utilise le profil utilisateur pour générer des recommandations
-    intelligentes ou répondre à des questions spécifiques sur les mangas/livres.
-
-    Args:
-        request: Requête contenant le profil utilisateur et les préférences
-        predict_service: Service de prédiction injecté automatiquement
-
-    Returns:
-        PredictResponse: Réponse contenant les recommandations et la réponse IA
-    """
     """ 
     Endpoint principal pour les prédictions et recommandations personnalisées.
 
