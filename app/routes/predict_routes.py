@@ -119,9 +119,6 @@ async def predict(request: PredictRequest):
 @router.get("/health")
 async def health_check():
     """
-    error double doctring
-    """
-    """
     Endpoint de surveillance de l'état de santé du service de prédiction.
 
     Utilisé pour le monitoring et le diagnostic du système. Cet endpoint
@@ -143,12 +140,3 @@ async def health_check():
         - Utiliser dans les load balancers pour health checks
     """
     return {"status": "healthy", "service": "predict"}
-
-@router.get("/health")
-async def health_check():
-    """
-    Endpoint de surveillance de l'état de santé du service de prédiction.
-    ... (docstring)
-    """
-    #return {"status": "healthy", "service": "predict"}
-    raise HTTPException(status_code=500, detail="Erreur simulée pour test rollback")
