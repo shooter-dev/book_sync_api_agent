@@ -1,26 +1,11 @@
-from typing import Annotated
-
-from fastapi import APIRouter, Depends, HTTPException, Request
-
 from fastapi import APIRouter, HTTPException, Request, Depends
 from app.models.predict_request import PredictRequest
 from app.models.predict_response import PredictResponse
 from app.services.predict_service import PredictService
-
-router = APIRouter(prefix="/predict", tags=["prediction"])
 from app.middleware.auth import verify_api_key
 
+router = APIRouter(prefix="/predict", tags=["prediction"])
 
-def get_predict_service() -> PredictService:
-    """
-    Fonction de dépendance pour obtenir une instance de PredictService.
-
-    Permet l'injection de dépendances et facilite le mocking dans les tests.
-
-    Returns:
-        PredictService: Instance du service de prédiction
-    """
-    return PredictService()
 # Instance du service (initialisée de manière paresseuse pour éviter les problèmes de tests)
 _predict_service = None
 
@@ -33,7 +18,6 @@ def get_predict_service():
     """
     global _predict_service
     if _predict_service is None:
-        from app.services.predict_service import PredictService
         _predict_service = PredictService()
     return _predict_service
 
@@ -82,12 +66,10 @@ async def predict_raw(request: Request):
         return PredictResponse(
             answer=f"Test réussi avec JSON brut! Collection: {list(data.get('collection', {}).keys())}",
             thought_process=["JSON brut reçu", f"User: {data.get('user_age')}"],
-            enough_context=True,
-            sources_count=0,
-            avg_similarity=None,
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Erreur: {str(e)}")
+
 
 @router.post("/", response_model=PredictResponse, dependencies=[Depends(verify_api_key)])
 async def predict(request: PredictRequest):
@@ -158,4 +140,4 @@ async def health_check():
         - Vérifier la disponibilité avant d'autres opérations
         - Utiliser dans les load balancers pour health checks
     """
-   return {"status": "healthy", "service": "predict"}
+    return {"status": "healthy", "service": "predict"}
