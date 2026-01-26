@@ -929,11 +929,85 @@ az containerapp show \
 
 ---
 
+## Rollback et Gestion des Erreurs de Deploiement
+
+### Vue d'ensemble
+
+Le systeme CI/CD inclut des mecanismes automatiques et manuels pour gerer les erreurs de deploiement :
+
+```
+Deploiement
+    |
+    v
+Health Check (/predict/health)
+    |
++---+---+
+|       |
+OK    ECHEC
+|       |
+v       v
+FIN   ROLLBACK AUTOMATIQUE
+```
+
+### Rollback automatique
+
+Le workflow `deploy.yml` effectue automatiquement un rollback si le health check echoue apres deploiement :
+
+1. **Sauvegarde** : L'image actuelle est sauvegardee avant deploiement
+2. **Health Check** : 10 tentatives, 15 secondes entre chaque
+3. **Rollback** : Si echec, retour automatique a la version precedente
+
+### Rollback manuel
+
+Plusieurs methodes disponibles :
+
+| Methode | Commande | Cas d'usage |
+|---------|----------|-------------|
+| GitHub Actions | Actions > Rollback Deployment | Recommande |
+| Makefile | `make rollback-previous` | Ligne de commande |
+| Script | `./scripts/rollback.sh` | Controle total |
+| Azure CLI | `az containerapp update` | Urgence |
+
+### Commandes rapides
+
+```bash
+# Voir l'etat actuel
+make rollback-current
+make health-check
+
+# Rollback
+make rollback-previous           # Version precedente
+make rollback-to TAG=<sha>       # Version specifique
+
+# Lister les versions
+make rollback-list
+```
+
+### Documentation detaillee
+
+Pour les procedures completes, consultez :
+
+- **[docs/procedure_rollback_gestion_erreurs.md](docs/procedure_rollback_gestion_erreurs.md)** : Procedure operationnelle complete
+- **[docs/rollback_deploiement.md](docs/rollback_deploiement.md)** : Documentation technique du rollback
+- **[rollback.md](rollback.md)** : Guide complet avec tous les fichiers et exemples
+
+### Workflow de rollback manuel
+
+Le fichier `.github/workflows/rollback.yml` permet de declencher un rollback depuis l'interface GitHub :
+
+1. Aller sur **Actions** > **Rollback Deployment**
+2. Cliquer sur **Run workflow**
+3. Choisir le type : `previous`, `specific`, ou `latest_stable`
+4. Executer et surveiller
+
+---
+
 ## Support
 
-En cas de problème :
-1. Vérifiez les logs GitHub Actions
-2. Vérifiez les logs Azure Container App
-3. Vérifiez que tous les secrets sont bien configurés
-4. Testez le déploiement manuel avant l'automatisation
+En cas de probleme :
+1. Verifiez les logs GitHub Actions
+2. Verifiez les logs Azure Container App
+3. Verifiez que tous les secrets sont bien configures
+4. Testez le deploiement manuel avant l'automatisation
+5. **En cas d'echec de deploiement** : Consultez [docs/procedure_rollback_gestion_erreurs.md](docs/procedure_rollback_gestion_erreurs.md)
 
