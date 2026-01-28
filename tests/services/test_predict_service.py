@@ -27,8 +27,10 @@ class TestPredictService:
         mock_vector_store = MagicMock()
         mock_synthesizer = MagicMock()
 
-        # Configurer le mock du synthesizer pour retourner une chaîne
-        mock_synthesizer.generate_global_response.return_value = "Réponse IA générée par le mock"
+        # Configurer le mock du synthesizer pour retourner un tuple (response, prompt_tokens, completion_tokens, avg_similarity)
+        mock_synthesizer.generate_global_response_with_metrics.return_value = (
+            "Réponse IA générée par le mock", 100, 60, 0.85
+        )
 
         # Configurer le mock du vector_store
         mock_vector_store.search.return_value = MagicMock()
@@ -95,8 +97,8 @@ class TestPredictService:
         """Test une prédiction réussie."""
         # Configuration des mocks
         mock_search.return_value = mock_search_results
-        predict_service.synthesizer.generate_global_response.return_value = (
-            "Voici mes recommandations personnalisées pour vous."
+        predict_service.synthesizer.generate_global_response_with_metrics.return_value = (
+            "Voici mes recommandations personnalisées pour vous.", 100, 60, 0.85
         )
 
         # Exécution
