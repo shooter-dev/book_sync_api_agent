@@ -1,0 +1,942 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pipeline CI/CD BookSync API Agent - Documentation Complète</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            color: #333;
+            line-height: 1.6;
+        }
+        
+        header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px 20px;
+            text-align: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        
+        header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+        
+        nav {
+            background: white;
+            padding: 20px;
+            margin-bottom: 40px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        
+        nav a {
+            padding: 10px 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        nav a:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+        
+        section {
+            background: white;
+            margin-bottom: 30px;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        section h2 {
+            color: #667eea;
+            font-size: 1.8em;
+            margin-bottom: 20px;
+            border-bottom: 3px solid #667eea;
+            padding-bottom: 10px;
+        }
+        
+        section h3 {
+            color: #764ba2;
+            font-size: 1.3em;
+            margin-top: 25px;
+            margin-bottom: 15px;
+        }
+        
+        .section-intro {
+            background: #f8f9fa;
+            padding: 20px;
+            border-left: 4px solid #667eea;
+            margin-bottom: 20px;
+            border-radius: 4px;
+        }
+        
+        .workflow-box {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 15px 0;
+        }
+        
+        .workflow-step {
+            background: white;
+            color: #333;
+            padding: 15px;
+            margin: 10px 0;
+            border-left: 4px solid #f97316;
+            border-radius: 4px;
+        }
+        
+        .success {
+            border-left-color: #22c55e;
+            background: #f0fdf4;
+        }
+        
+        .error {
+            border-left-color: #ef4444;
+            background: #fef2f2;
+        }
+        
+        .warning {
+            border-left-color: #f59e0b;
+            background: #fffbeb;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            font-size: 0.95em;
+        }
+        
+        th {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+        }
+        
+        td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        
+        tr:nth-child(even) {
+            background: #f9fafb;
+        }
+        
+        tr:hover {
+            background: #f3f4f6;
+        }
+        
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin: 20px 0;
+        }
+        
+        .grid-3 {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            margin: 20px 0;
+        }
+        
+        .card {
+            background: #f8f9fa;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 20px;
+            transition: all 0.3s ease;
+        }
+        
+        .card:hover {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            transform: translateY(-2px);
+        }
+        
+        .card h4 {
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 1.1em;
+        }
+        
+        .card ul {
+            list-style: none;
+            padding-left: 0;
+        }
+        
+        .card li {
+            padding: 5px 0;
+            padding-left: 20px;
+            position: relative;
+        }
+        
+        .card li:before {
+            content: "✓";
+            position: absolute;
+            left: 0;
+            color: #22c55e;
+            font-weight: bold;
+        }
+        
+        .command-box {
+            background: #1f2937;
+            color: #10b981;
+            padding: 15px;
+            border-radius: 6px;
+            font-family: 'Courier New', monospace;
+            overflow-x: auto;
+            margin: 10px 0;
+            border-left: 4px solid #10b981;
+        }
+        
+        .code-inline {
+            background: #f3f4f6;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            color: #d97706;
+        }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 600;
+            margin: 2px;
+        }
+        
+        .status-success {
+            background: #d1fae5;
+            color: #065f46;
+        }
+        
+        .status-error {
+            background: #fee2e2;
+            color: #7f1d1d;
+        }
+        
+        .status-warning {
+            background: #fef3c7;
+            color: #92400e;
+        }
+        
+        .status-info {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+        
+        .flow-diagram {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin: 20px 0;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        
+        .flow-step {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 20px;
+            border-radius: 6px;
+            min-width: 150px;
+            text-align: center;
+            font-weight: 600;
+        }
+        
+        .flow-arrow {
+            color: #667eea;
+            font-size: 1.5em;
+            font-weight: bold;
+        }
+        
+        .job-container {
+            border: 2px solid #667eea;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            background: #f8f9ff;
+        }
+        
+        .job-title {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px;
+            margin: -20px -20px 20px -20px;
+            border-radius: 6px 6px 0 0;
+            font-size: 1.2em;
+            font-weight: 600;
+        }
+        
+        footer {
+            background: #1f2937;
+            color: white;
+            text-align: center;
+            padding: 30px;
+            margin-top: 50px;
+            border-radius: 8px;
+        }
+        
+        .section-number {
+            display: inline-block;
+            background: #667eea;
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 30px;
+            margin-right: 10px;
+            font-weight: bold;
+        }
+        
+        .highlight {
+            background: #fef3c7;
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+        
+        @media (max-width: 768px) {
+            .grid-2, .grid-3 {
+                grid-template-columns: 1fr;
+            }
+            
+            header h1 {
+                font-size: 1.8em;
+            }
+            
+            nav {
+                flex-direction: column;
+            }
+            
+            nav a {
+                width: 100%;
+                text-align: center;
+            }
+            
+            .flow-diagram {
+                flex-direction: column;
+            }
+            
+            .flow-arrow {
+                transform: rotate(90deg);
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>🚀 Pipeline CI/CD BookSync API Agent</h1>
+        <p>Documentation Complète - Schémas, Workflows et Traçabilité</p>
+        <p style="font-size: 0.9em; margin-top: 10px;">Référentiel E3 - RNCP37827 - Développeur en Intelligence Artificielle</p>
+    </header>
+    
+    <div class="container">
+        <nav>
+            <a href="#overview">Vue d'ensemble</a>
+            <a href="#jobs">Jobs CI/CD</a>
+            <a href="#rollback">Rollback Manuel</a>
+            <a href="#logs">Traçabilité & Logs</a>
+            <a href="#dataflow">Flux de Données</a>
+            <a href="#env">Variables & Secrets</a>
+            <a href="#commands">Commandes</a>
+            <a href="#summary">Résumé</a>
+        </nav>
+        
+        <!-- SECTION 1: VUE D'ENSEMBLE -->
+        <section id="overview">
+            <h2><span class="section-number">1</span>Vue d'ensemble du Pipeline</h2>
+            
+            <div class="section-intro">
+                <p>Le pipeline CI/CD BookSync automatise l'ensemble du processus de test, build et déploiement. À chaque push sur <span class="code-inline">main</span>, le pipeline exécute les tests, construit l'image Docker et la déploie sur Azure Container Apps avec un système de rollback automatique en cas d'échec.</p>
+            </div>
+            
+            <h3>Flux Principal</h3>
+            <div class="flow-diagram">
+                <div class="flow-step" style="background: #22c55e;">Push sur main</div>
+                <div class="flow-arrow">→</div>
+                <div class="flow-step" style="background: #3b82f6;">JOB 1: Tests</div>
+                <div class="flow-arrow">→</div>
+                <div class="flow-step" style="background: #f97316;">JOB 2: Build</div>
+                <div class="flow-arrow">→</div>
+                <div class="flow-step" style="background: #8b5cf6;">Deploy</div>
+                <div class="flow-arrow">→</div>
+                <div class="flow-step" style="background: #ec4899;">Health Check</div>
+            </div>
+            
+            <h3>Résultats Possibles</h3>
+            <div class="grid-2">
+                <div class="card success">
+                    <h4>✓ Succès</h4>
+                    <p>Health check réussi (HTTP 200)</p>
+                    <p style="margin-top: 10px; color: #059669; font-weight: 600;">→ Déploiement Terminé</p>
+                </div>
+                <div class="card error">
+                    <h4>✗ Échec</h4>
+                    <p>Health check échoué</p>
+                    <p style="margin-top: 10px; color: #dc2626; font-weight: 600;">→ Rollback Automatique</p>
+                </div>
+            </div>
+        </section>
+        
+        <!-- SECTION 2: JOBS CI/CD -->
+        <section id="jobs">
+            <h2><span class="section-number">2</span>Jobs CI/CD Détaillés</h2>
+            
+            <h3>JOB 1: Tests et Qualité de Code</h3>
+            <div class="job-container">
+                <div class="job-title">JOB 1: TESTS ET QUALITÉ</div>
+                <p style="margin-bottom: 15px;"><strong>Objectif:</strong> Vérifier la qualité du code et exécuter les tests unitaires et d'intégration.</p>
+                
+                <div class="workflow-step">
+                    <strong>1️⃣ Checkout du code</strong>
+                    <p>Récupération du code source depuis GitHub</p>
+                </div>
+                
+                <div class="workflow-step">
+                    <strong>2️⃣ Setup Python 3.13</strong>
+                    <p>Configuration de l'environnement Python</p>
+                </div>
+                
+                <div class="workflow-step">
+                    <strong>3️⃣ Installation des dépendances</strong>
+                    <p><span class="code-inline">pip install -r requirements.txt</span></p>
+                </div>
+                
+                <div class="workflow-step">
+                    <strong>4️⃣ Linting (flake8)</strong>
+                    <p>Vérification de la syntaxe et des standards de code</p>
+                    <p style="margin-top: 5px;"><span class="status-badge status-warning">Condition: Pas d'erreur critique</span></p>
+                </div>
+                
+                <div class="workflow-step">
+                    <strong>5️⃣ Tests (pytest)</strong>
+                    <p>Exécution de tous les tests unitaires et d'intégration</p>
+                    <p style="margin-top: 5px;"><span class="status-badge status-warning">Condition: Tous les tests passent</span></p>
+                </div>
+                
+                <div class="workflow-step success">
+                    <strong>6️⃣ Upload Couverture de Code</strong>
+                    <p>Envoi du rapport de couverture vers Codecov</p>
+                    <p style="margin-top: 5px;"><span class="status-badge status-success">Succès</span> → Passage à JOB 2</p>
+                </div>
+            </div>
+            
+            <h3>JOB 2: Build et Déploiement</h3>
+            <div class="job-container">
+                <div class="job-title" style="background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);">JOB 2: BUILD ET DÉPLOIEMENT</div>
+                <p style="margin-bottom: 15px;"><strong>Objectif:</strong> Construire l'image Docker, la pousser vers Azure ACR et déployer sur Azure Container Apps.</p>
+                
+                <div class="workflow-step">
+                    <strong>1️⃣ Checkout du code</strong>
+                    <p>Récupération du code source</p>
+                </div>
+                
+                <div class="workflow-step">
+                    <strong>2️⃣ Azure CLI Login</strong>
+                    <p>Authentification auprès d'Azure avec les credentials stockés en secrets</p>
+                    <p style="margin-top: 5px;"><span class="code-inline">AZURE_CREDENTIALS</span></p>
+                </div>
+                
+                <div class="workflow-step">
+                    <strong>3️⃣ Docker Login vers ACR</strong>
+                    <p>Connexion au registre Azure Container Registry</p>
+                    <p style="margin-top: 5px;"><span class="code-inline">booksyncrepo.azurecr.io</span></p>
+                </div>
+                
+                <div class="workflow-step">
+                    <strong>4️⃣ Build & Push Image Docker</strong>
+                    <p>Création et envoi de l'image vers ACR avec tag SHA du commit</p>
+                    <p style="margin-top: 5px;"><span class="code-inline">api-booksync:${GITHUB_SHA}</span></p>
+                </div>
+                
+                <div class="workflow-step warning">
+                    <strong>5️⃣ Sauvegarde Image Actuelle</strong>
+                    <p>Stockage du tag de l'image en production (pour rollback futur)</p>
+                    <p style="margin-top: 5px;"><span class="code-inline">previous_image.txt</span></p>
+                </div>
+                
+                <div class="workflow-step">
+                    <strong>6️⃣ Déploiement Azure Container Apps</strong>
+                    <p><span class="code-inline">az containerapp update</span> avec nouvelle image</p>
+                    <p style="margin-top: 5px;">Groupe: <span class="code-inline">vplatevoetRG</span> | App: <span class="code-inline">api-booksync</span></p>
+                </div>
+                
+                <div class="workflow-step">
+                    <strong>7️⃣ Attente & Health Check</strong>
+                    <p>⏱️ Attente de 30 secondes après déploiement</p>
+                    <p>🏥 Health Check: <span class="code-inline">GET /predict/health</span></p>
+                    <p style="margin-top: 8px; padding: 10px; background: #eff6ff; border-radius: 4px;">
+                        • <strong>Tentatives:</strong> 10 maximum<br>
+                        • <strong>Intervalle:</strong> 15 secondes<br>
+                        • <strong>Timeout:</strong> 10 secondes par requête<br>
+                        • <strong>Succès:</strong> HTTP 200 OK
+                    </p>
+                </div>
+                
+                <div class="grid-2" style="margin-top: 15px;">
+                    <div class="workflow-step success">
+                        <strong>✓ Health Check Réussi</strong>
+                        <p style="margin-top: 8px; color: #059669; font-weight: 600;">Déploiement Terminé avec Succès</p>
+                    </div>
+                    <div class="workflow-step error">
+                        <strong>✗ Health Check Échoué</strong>
+                        <p style="margin-top: 8px; color: #dc2626; font-weight: 600;">Activation du Rollback Automatique</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+        
+        <!-- SECTION 3: ROLLBACK MANUEL -->
+        <section id="rollback">
+            <h2><span class="section-number">3</span>Workflow de Rollback Manuel</h2>
+            
+            <div class="section-intro">
+                <p>Le workflow de rollback peut être déclenché manuellement via GitHub Actions. Il permet de revenir à une version précédente en cas de problème en production.</p>
+            </div>
+            
+            <h3>Déclenchement du Rollback</h3>
+            <div class="card">
+                <h4>Options disponibles:</h4>
+                <ul>
+                    <li><span class="code-inline">previous</span> - Retour à la version immédiatement précédente</li>
+                    <li><span class="code-inline">specific</span> - Retour à un tag/SHA spécifique</li>
+                    <li><span class="code-inline">latest_stable</span> - Retour à la dernière version stable</li>
+                </ul>
+            </div>
+            
+            <h3>Processus du Rollback</h3>
+            <div class="grid-3" style="margin-top: 20px;">
+                <div class="card">
+                    <h4>📋 JOB 1: Préparation</h4>
+                    <ul>
+                        <li>Connexion Azure</li>
+                        <li>Récupération image actuelle</li>
+                        <li>Détermination image cible</li>
+                    </ul>
+                </div>
+                
+                <div class="card">
+                    <h4>⚙️ JOB 2: Exécution</h4>
+                    <ul>
+                        <li>Sauvegarde état actuel</li>
+                        <li>Upload artefact (backup)</li>
+                        <li>Update Container App</li>
+                    </ul>
+                </div>
+                
+                <div class="card">
+                    <h4>🏥 JOB 3: Vérification</h4>
+                    <ul>
+                        <li>Health check: /predict/health</li>
+                        <li>10 tentatives max</li>
+                        <li>Intervalle: 15s</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <h3>JOB 4: Notification</h3>
+            <div class="card" style="margin-top: 15px;">
+                <h4>📧 Notification du résultat</h4>
+                <p>Envoi du statut (succès/échec) - Extensible vers:</p>
+                <ul style="margin-top: 10px;">
+                    <li>Slack</li>
+                    <li>Microsoft Teams</li>
+                    <li>Email</li>
+                </ul>
+            </div>
+        </section>
+        
+        <!-- SECTION 4: TRAÇABILITÉ ET AUDIT -->
+        <section id="logs">
+            <h2><span class="section-number">4</span>Traçabilité et Audit</h2>
+            
+            <h3>Gestion des Logs</h3>
+            <table>
+                <tr>
+                    <th>Étape</th>
+                    <th>Source des logs</th>
+                    <th>Rétention</th>
+                </tr>
+                <tr>
+                    <td><span class="status-badge status-info">Tests</span></td>
+                    <td>GitHub Actions</td>
+                    <td>90 jours</td>
+                </tr>
+                <tr>
+                    <td><span class="status-badge status-info">Build Docker</span></td>
+                    <td>GitHub Actions + ACR</td>
+                    <td>90 jours</td>
+                </tr>
+                <tr>
+                    <td><span class="status-badge status-info">Déploiement</span></td>
+                    <td>Azure Container Apps</td>
+                    <td>30 jours</td>
+                </tr>
+                <tr>
+                    <td><span class="status-badge status-info">Health Check</span></td>
+                    <td>GitHub Actions</td>
+                    <td>90 jours</td>
+                </tr>
+                <tr>
+                    <td><span class="status-badge status-warning">Rollback</span></td>
+                    <td>GitHub Actions + Artefacts</td>
+                    <td>30 jours</td>
+                </tr>
+            </table>
+            
+            <h3>Artefacts de Traçabilité</h3>
+            <table>
+                <tr>
+                    <th>Artefact</th>
+                    <th>Description</th>
+                    <th>Rétention</th>
+                </tr>
+                <tr>
+                    <td><span class="code-inline">coverage.xml</span></td>
+                    <td>Rapport de couverture de code</td>
+                    <td>Upload Codecov</td>
+                </tr>
+                <tr>
+                    <td><span class="code-inline">previous_image.txt</span></td>
+                    <td>Tag de l'image avant rollback</td>
+                    <td>30 jours</td>
+                </tr>
+                <tr>
+                    <td>Logs GitHub Actions</td>
+                    <td>Historique complet des jobs</td>
+                    <td>90 jours</td>
+                </tr>
+                <tr>
+                    <td>Tags ACR</td>
+                    <td>Images Docker versionnées</td>
+                    <td>Illimitée</td>
+                </tr>
+            </table>
+            
+            <h3>Points de Contrôle</h3>
+            <div class="grid-3" style="margin-top: 20px;">
+                <div class="card success">
+                    <h4>✓ PRE-DÉPLOIEMENT</h4>
+                    <ul>
+                        <li>Tests unitaires passés</li>
+                        <li>Tests d'intégration passés</li>
+                        <li>Linting sans erreurs critiques</li>
+                        <li>Couverture de code mesurée</li>
+                    </ul>
+                </div>
+                
+                <div class="card success">
+                    <h4>✓ POST-DÉPLOIEMENT</h4>
+                    <ul>
+                        <li>Health check réussi (HTTP 200)</li>
+                        <li>Vérification endpoint /predict/health</li>
+                        <li>Application accessible</li>
+                        <li>Rollback auto si échec</li>
+                    </ul>
+                </div>
+                
+                <div class="card success">
+                    <h4>✓ AUDIT</h4>
+                    <ul>
+                        <li>Chaque déploiement tracé par SHA</li>
+                        <li>Images taguées avec SHA Git</li>
+                        <li>Historique complet GitHub Actions</li>
+                        <li>Traçabilité des modifications</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+        
+        <!-- SECTION 5: FLUX DE DONNÉES -->
+        <section id="dataflow">
+            <h2><span class="section-number">5</span>Flux de Données Complet</h2>
+            
+            <div class="flow-diagram" style="justify-content: flex-start; margin: 30px 0;">
+                <div class="flow-step" style="background: #3b82f6; min-width: 180px;">
+                    <div style="font-size: 1.2em; margin-bottom: 5px;">📦</div>
+                    GitHub Repo
+                    <div style="font-size: 0.8em; margin-top: 5px; opacity: 0.9;">Code Source</div>
+                </div>
+                <div class="flow-arrow">→</div>
+                <div class="flow-step" style="background: #8b5cf6; min-width: 180px;">
+                    <div style="font-size: 1.2em; margin-bottom: 5px;">⚙️</div>
+                    GitHub Actions
+                    <div style="font-size: 0.8em; margin-top: 5px; opacity: 0.9;">Tests + Build</div>
+                </div>
+                <div class="flow-arrow">→</div>
+                <div class="flow-step" style="background: #f97316; min-width: 180px;">
+                    <div style="font-size: 1.2em; margin-bottom: 5px;">🐳</div>
+                    Azure ACR
+                    <div style="font-size: 0.8em; margin-top: 5px; opacity: 0.9;">Image Docker</div>
+                </div>
+            </div>
+            
+            <div class="flow-diagram" style="justify-content: flex-start; margin: 30px 0;">
+                <div class="flow-step" style="background: #ec4899; min-width: 180px;">
+                    <div style="font-size: 1.2em; margin-bottom: 5px;">☁️</div>
+                    Azure Container Apps
+                    <div style="font-size: 0.8em; margin-top: 5px; opacity: 0.9;">Déploiement</div>
+                </div>
+                <div class="flow-arrow">→</div>
+                <div class="flow-step" style="background: #22c55e; min-width: 180px;">
+                    <div style="font-size: 1.2em; margin-bottom: 5px;">🚀</div>
+                    Azure App (Prod)
+                    <div style="font-size: 0.8em; margin-top: 5px; opacity: 0.9;">Service /predict</div>
+                </div>
+            </div>
+            
+            <h3>Détails de chaque étape</h3>
+            <div class="grid-2" style="margin-top: 20px;">
+                <div class="card">
+                    <h4>1️⃣ GitHub Repo</h4>
+                    <ul>
+                        <li>Stockage du code source</li>
+                        <li>Commits et branches</li>
+                        <li>Declenchement sur push main</li>
+                    </ul>
+                </div>
+                
+                <div class="card">
+                    <h4>2️⃣ GitHub Actions</h4>
+                    <ul>
+                        <li>Tests unitaires</li>
+                        <li>Linting du code</li>
+                        <li>Build image Docker</li>
+                    </ul>
+                </div>
+                
+                <div class="card">
+                    <h4>3️⃣ Azure ACR</h4>
+                    <ul>
+                        <li>Registry Docker privé</li>
+                        <li>Versions des images</li>
+                        <li>Tags SHA Git</li>
+                    </ul>
+                </div>
+                
+                <div class="card">
+                    <h4>4️⃣ Azure Container Apps</h4>
+                    <ul>
+                        <li>Orchestration containers</li>
+                        <li>Scaling automatique</li>
+                        <li>Health monitoring</li>
+                    </ul>
+                </div>
+                
+                <div class="card">
+                    <h4>5️⃣ Azure App (Prod)</h4>
+                    <ul>
+                        <li>Service HTTP actif</li>
+                        <li>Endpoint /predict</li>
+                        <li>API disponible</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+        
+        <!-- SECTION 6: VARIABLES ET SECRETS -->
+        <section id="env">
+            <h2><span class="section-number">6</span>Variables d'Environnement et Secrets</h2>
+            
+            <h3>🔐 Secrets GitHub Actions</h3>
+            <table>
+                <tr>
+                    <th>Secret</th>
+                    <th>Description</th>
+                    <th>Utilisation</th>
+                </tr>
+                <tr>
+                    <td><span class="code-inline">AZURE_CREDENTIALS</span></td>
+                    <td>Service Principal Azure (JSON)</td>
+                    <td>Connexion Azure CLI</td>
+                </tr>
+            </table>
+            
+            <h3>🔧 Variables d'Environnement</h3>
+            <table>
+                <tr>
+                    <th>Variable</th>
+                    <th>Valeur</th>
+                    <th>Description</th>
+                </tr>
+                <tr>
+                    <td><span class="code-inline">AZURE_CONTAINER_REGISTRY</span></td>
+                    <td><span class="code-inline">booksyncrepo.azurecr.io</span></td>
+                    <td>Registre Docker Azure</td>
+                </tr>
+                <tr>
+                    <td><span class="code-inline">IMAGE_NAME</span></td>
+                    <td><span class="code-inline">api-booksync</span></td>
+                    <td>Nom de l'image Docker</td>
+                </tr>
+                <tr>
+                    <td><span class="code-inline">RESOURCE_GROUP</span></td>
+                    <td><span class="code-inline">vplatevoetRG</span></td>
+                    <td>Groupe de ressources Azure</td>
+                </tr>
+                <tr>
+                    <td><span class="code-inline">CONTAINER_APP</span></td>
+                    <td><span class="code-inline">api-booksync</span></td>
+                    <td>Nom du Container App Azure</td>
+                </tr>
+            </table>
+        </section>
+        
+        <!-- SECTION 7: COMMANDES -->
+        <section id="commands">
+            <h2><span class="section-number">7</span>Commandes de Rollback</h2>
+            
+            <h3>Via Makefile</h3>
+            <p style="margin-bottom: 15px;">Commandes locales pour gérer le rollback:</p>
+            
+            <div class="command-box">make rollback-list</div>
+            <p style="margin-top: 5px; margin-bottom: 15px;">📋 Lister les images disponibles</p>
+            
+            <div class="command-box">make rollback-current</div>
+            <p style="margin-top: 5px; margin-bottom: 15px;">👀 Voir l'image actuellement déployée</p>
+            
+            <div class="command-box">make rollback-previous</div>
+            <p style="margin-top: 5px; margin-bottom: 15px;">⏮️ Rollback vers la version précédente</p>
+            
+            <div class="command-box">make rollback-to TAG=&lt;sha_du_commit&gt;</div>
+            <p style="margin-top: 5px; margin-bottom: 15px;">🎯 Rollback vers une version spécifique</p>
+            
+            <div class="command-box">make health-check</div>
+            <p style="margin-top: 5px; margin-bottom: 15px;">🏥 Vérifier la santé de l'application</p>
+            
+            <h3>Via GitHub Actions</h3>
+            <div class="card">
+                <ol style="padding-left: 20px;">
+                    <li>Aller dans l'onglet <strong>Actions</strong> du repository</li>
+                    <li>Sélectionner le workflow <strong>Rollback Deployment</strong></li>
+                    <li>Cliquer sur <strong>Run workflow</strong></li>
+                    <li>Choisir le type de rollback</li>
+                    <li>Exécuter et surveiller les logs</li>
+                </ol>
+            </div>
+        </section>
+        
+        <!-- SECTION 8: RÉSUMÉ -->
+        <section id="summary">
+            <h2><span class="section-number">8</span>Résumé des 11 Étapes du Pipeline</h2>
+            
+            <table>
+                <tr>
+                    <th style="width: 5%;">N°</th>
+                    <th style="width: 35%;">Action</th>
+                    <th style="width: 40%;">Détails</th>
+                    <th style="width: 20%;">Condition</th>
+                </tr>
+                <tr>
+                    <td><strong>1</strong></td>
+                    <td>Checkout du code</td>
+                    <td>Récupération du code source depuis GitHub</td>
+                    <td><span class="status-badge status-success">Automatique</span></td>
+                </tr>
+                <tr>
+                    <td><strong>2</strong></td>
+                    <td>Configuration Python 3.13</td>
+                    <td>Installation et configuration de Python</td>
+                    <td><span class="status-badge status-success">Automatique</span></td>
+                </tr>
+                <tr>
+                    <td><strong>3</strong></td>
+                    <td>Installation dépendances</td>
+                    <td><span class="code-inline">pip install -r requirements.txt</span></td>
+                    <td><span class="status-badge status-success">Automatique</span></td>
+                </tr>
+                <tr>
+                    <td><strong>4</strong></td>
+                    <td>Linting (flake8)</td>
+                    <td>Vérification syntaxe et standards PEP 8</td>
+                    <td><span class="status-badge status-warning">Pas d'erreurs critiques</span></td>
+                </tr>
+                <tr>
+                    <td><strong>5</strong></td>
+                    <td>Tests (pytest)</td>
+                    <td>Exécution des tests unitaires</td>
+                    <td><span class="status-badge status-warning">Tous les tests passent</span></td>
+                </tr>
+                <tr>
+                    <td><strong>6</strong></td>
+                    <td>Connexion Azure</td>
+                    <td>Authentification auprès d'Azure CLI</td>
+                    <td><span class="status-badge status-warning">Credentials valides</span></td>
+                </tr>
+                <tr>
+                    <td><strong>7</strong></td>
+                    <td>Build image Docker</td>
+                    <td>Construction de l'image avec Dockerfile</td>
+                    <td><span class="status-badge status-warning">Dockerfile valide</span></td>
+                </tr>
+                <tr>
+                    <td><strong>8</strong></td>
+                    <td>Push vers ACR</td>
+                    <td>Envoi de l'image au registre Azure</td>
+                    <td><span class="status-badge status-warning">Auth réussie</span></td>
+                </tr>
+                <tr>
+                    <td><strong>9</strong></td>
+                    <td>Déploiement Container App</td>
+                    <td>Mise à jour du Container App avec nouvelle image</td>
+                    <td><span class="status-badge status-warning">Image disponible</span></td>
+                </tr>
+                <tr>
+                    <td><strong>10</strong></td>
+                    <td>Health Check</td>
+                    <td><span class="code-inline">GET /predict/health</span> (10 tentatives)</td>
+                    <td><span class="status-badge status-warning">HTTP 200 OK</span></td>
+                </tr>
+                <tr>
+                    <td><strong>11</strong></td>
+                    <td>Rollback (si échec)</td>
+                    <td>Activation automatique si Health Check échoue</td>
+                    <td><span class="status-badge status-error">Health check échoue</span></td>
+                </tr>
+            </table>
+        </section>
+    </div>
+    
+    <footer>
+        <p><strong>📄 Document: Pipeline CI/CD BookSync API Agent</strong></p>
+        <p>Référentiel E3 - RNCP37827 - Développeur en Intelligence Artificielle</p>
+        <p style="margin-top: 15px; font-size: 0.9em; opacity: 0.8;">© 2026 - Documentation Complète du Pipeline CI/CD | Dernière mise à jour: Janvier 2026</p>
+    </footer>
+</body>
+</html>
