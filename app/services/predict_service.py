@@ -1,11 +1,25 @@
 import logging
+import time
 from typing import Optional, Dict, Any, List
 
 from app.database.vector_store import VectorStore
 from app.models.predict_request import PredictRequest
 from app.models.predict_response import PredictResponse, RecommendedSerie
 from app.services.synthesizer import Synthesizer
-from app.metrics.llm_metrics import metrics_collector
+from app.metrics.llm_metrics import (
+    metrics_collector,
+    total_operations,
+    input_tokens_total,
+    output_tokens_total,
+    response_time_seconds,
+    success_total,
+    error_total,
+    error_total_global,
+    cost_dollars_total,
+    get_agent_label,
+    prediction_requests_total,
+    llm_errors_total
+)
 
 
 class PredictService:
@@ -167,9 +181,13 @@ class PredictService:
         - Le nombre de résultats de recherche vectorielle
         - Les erreurs éventuelles
         """
-        # Démarrer le chronomètre pour mesurer la latence (métriques LLMOps)
         metrics_collector.start_request()
-
+        op_start = time.time()
+        agent_label = get_agent_label({
+            "user_age": getattr(request, "user_age", None),
+            "user_genre": getattr(request, "user_genre", None),
+            "agent": getattr(request, "agent", None)
+        })
         try:
             print("=== DEBUT PREDICT SERVICE ===")
             print(f"Profil: {request.user_genre} {request.user_age} ans")
@@ -181,7 +199,6 @@ class PredictService:
             search_results = self._search_similar_volumes(request, limit=10)
             print(f"Résultats trouvés: {len(search_results)}")
 
-
             # Enregistrer les métriques de recherche vectorielle
             metrics_collector.record_vector_search(
                 success=not search_results.empty,
@@ -191,7 +208,6 @@ class PredictService:
             # Extraire les séries recommandées
             recommended_series = self._extract_series_recommendations(search_results, request)
             print(f"Séries extraites: {len(recommended_series)}")
-
 
             # Générer la réponse globale via l'agent IA
             if search_results.empty:
@@ -209,23 +225,57 @@ class PredictService:
                 "prediction_type": request.prediction_type,
                 "collection": request.collection,
                 "read": request.read,
+                # Ajout d'un champ agent si existant
+                "agent": getattr(request, "agent", None)
             }
+            agent_label = get_agent_label(user_profile)
 
             # Générer la réponse globale
-            synthesizer_response = self.synthesizer.generate_global_response(
+            synthesizer_response, prompt_tokens, completion_tokens, avg_similarity = self.synthesizer.generate_global_response_with_metrics(
                 recommended_series=recommended_series, user_profile=user_profile
             )
-
-
+            # MOCK si tokens non fournis
+            if prompt_tokens is None:
+                prompt_tokens = 0
+            if completion_tokens is None:
+                completion_tokens = 0
+            # Incrémentation systématique des métriques attendues
+            input_tokens_total.labels(agent=agent_label).inc(prompt_tokens)
+            output_tokens_total.labels(agent=agent_label).inc(completion_tokens)
+            total_operations.labels(agent=agent_label).inc()
+            success_total.inc()
+            # Toujours incrémenter error_total avec 0 si succès (pour visibilité Prometheus)
+            error_total.labels(error_type="none").inc(0)
+            error_total_global.inc(0)
+            # Enregistrer les metriques de tokens consommes
+            metrics_collector.record_tokens(prompt_tokens, completion_tokens)
+            # Enregistrer la similarite (si disponible)
+            if avg_similarity is not None:
+                metrics_collector.record_similarity(avg_similarity)
             # Enregistrer le succès de la requête (métriques LLMOps)
             metrics_collector.end_request(success=True)
-
+            latency = time.time() - op_start
+            response_time_seconds.observe(latency)
+            cost = (
+                (prompt_tokens / 1000) * metrics_collector.PRICE_PER_1K_PROMPT_TOKENS +
+                (completion_tokens / 1000) * metrics_collector.PRICE_PER_1K_COMPLETION_TOKENS
+            )
+            cost_dollars_total.inc(cost)
             return PredictResponse(
                 serie_recomendees=recommended_series, status="success", responce_IA_global=synthesizer_response
             )
-
         except Exception as e:
             logging.error(f"Erreur lors de la prédiction: {e}")
+            metrics_collector.record_error(error_type="predict_error")
+            metrics_collector.end_request(success=False)
+            error_total.labels(error_type="predict_error").inc()
+            error_total_global.inc()
+            total_operations.labels(agent=agent_label).inc()
+            # Toujours incrémenter les tokens à 0 en cas d'erreur
+            input_tokens_total.labels(agent=agent_label).inc(0)
+            output_tokens_total.labels(agent=agent_label).inc(0)
+            latency = time.time() - op_start
+            response_time_seconds.observe(latency)
             return PredictResponse(
                 serie_recomendees=[], status="error", responce_IA_global=f"Une erreur s'est produite: {str(e)}"
             )

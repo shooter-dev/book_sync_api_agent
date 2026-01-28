@@ -1,0 +1,300 @@
+# =============================================================================
+# Workflow de Rollback pour BookSync API Agent
+# =============================================================================
+# Ce workflow permet de restaurer une version anterieure de l'application
+# deployee sur Azure Container Apps.
+#
+# Declenchement:
+#   - Manuel via l'interface GitHub Actions (workflow_dispatch)
+#   - Appel depuis un autre workflow (workflow_call)
+#
+# Options:
+#   - image_tag: Tag de l'image cible (SHA du commit)
+#   - rollback_type: Type de rollback (previous, specific, latest_stable)
+# =============================================================================
+
+name: Rollback Deployment
+
+on:
+  # Declenchement manuel depuis l'interface GitHub
+  workflow_dispatch:
+    inputs:
+      rollback_type:
+        description: 'Type de rollback a effectuer'
+        required: true
+        default: 'previous'
+        type: choice
+        options:
+          - previous
+          - specific
+          - latest_stable
+      image_tag:
+        description: 'Tag de l image cible (requis si rollback_type=specific)'
+        required: false
+        type: string
+      skip_health_check:
+        description: 'Ignorer la verification de sante (non recommande)'
+        required: false
+        default: false
+        type: boolean
+
+  # Permet d appeler ce workflow depuis un autre workflow
+  workflow_call:
+    inputs:
+      rollback_type:
+        description: 'Type de rollback'
+        required: true
+        type: string
+      image_tag:
+        description: 'Tag de l image cible'
+        required: false
+        type: string
+      skip_health_check:
+        description: 'Ignorer la verification de sante'
+        required: false
+        default: false
+        type: boolean
+
+# Variables d environnement globales
+env:
+  AZURE_CONTAINER_REGISTRY: booksyncrepo.azurecr.io
+  IMAGE_NAME: api-booksync
+  RESOURCE_GROUP: vplatevoetRG
+  CONTAINER_APP: api-booksync
+  HEALTH_ENDPOINT: /predict/health
+  MAX_HEALTH_RETRIES: 10
+  HEALTH_RETRY_INTERVAL: 15
+
+jobs:
+  # ==========================================================================
+  # Job 1: Preparation du rollback
+  # ==========================================================================
+  prepare-rollback:
+    name: Preparation du Rollback
+    runs-on: ubuntu-latest
+    outputs:
+      image_tag_actuel: ${{ steps.get-current.outputs.image_tag }}
+      image_tag_cible: ${{ steps.determine-target.outputs.image_tag }}
+      app_url: ${{ steps.get-url.outputs.app_url }}
+
+    steps:
+      # 1. Connexion a Azure
+      - name: Connexion a Azure
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      # 2. Recuperation de l image actuellement deployee
+      - name: Recuperer l image actuelle
+        id: get-current
+        run: |
+          # Recupere le tag de l'image en cours
+          CURRENT_IMAGE=$(az containerapp show \
+            --name $CONTAINER_APP \
+            --resource-group $RESOURCE_GROUP \
+            --query "properties.template.containers[0].image" \
+            --output tsv)
+
+          # Extrait le tag
+          CURRENT_TAG=$(echo "$CURRENT_IMAGE" | sed 's/.*://')
+          echo "Image actuelle: $CURRENT_TAG"
+          echo "image_tag=$CURRENT_TAG" >> $GITHUB_OUTPUT
+
+      # 3. Recuperation de l URL de l application
+      - name: Recuperer l URL de l application
+        id: get-url
+        run: |
+          APP_URL=$(az containerapp show \
+            --name $CONTAINER_APP \
+            --resource-group $RESOURCE_GROUP \
+            --query "properties.configuration.ingress.fqdn" \
+            --output tsv)
+          echo "URL de l'application: https://$APP_URL"
+          echo "app_url=https://$APP_URL" >> $GITHUB_OUTPUT
+
+      # 4. Determination de l image cible selon le type de rollback
+      - name: Determiner l image cible
+        id: determine-target
+        run: |
+          ROLLBACK_TYPE="${{ inputs.rollback_type }}"
+
+          case "$ROLLBACK_TYPE" in
+            "previous"|"latest_stable")
+              # Recupere les 2 dernieres images
+              IMAGES=$(az acr repository show-tags \
+                --name booksyncrepo \
+                --repository $IMAGE_NAME \
+                --orderby time_desc \
+                --top 2 \
+                --output tsv)
+
+              # Prend la deuxieme (image precedente)
+              TARGET_TAG=$(echo "$IMAGES" | sed -n '2p')
+
+              if [ -z "$TARGET_TAG" ]; then
+                echo "::error::Impossible de trouver l'image precedente"
+                exit 1
+              fi
+              ;;
+            "specific")
+              TARGET_TAG="${{ inputs.image_tag }}"
+
+              if [ -z "$TARGET_TAG" ]; then
+                echo "::error::Le tag de l'image est requis pour un rollback specifique"
+                exit 1
+              fi
+
+              # Verifie que l'image existe
+              if ! az acr repository show-tags \
+                --name booksyncrepo \
+                --repository $IMAGE_NAME \
+                --query "[?@=='$TARGET_TAG']" \
+                --output tsv | grep -q "$TARGET_TAG"; then
+                echo "::error::L'image $TARGET_TAG n'existe pas dans le registre"
+                exit 1
+              fi
+              ;;
+            *)
+              echo "::error::Type de rollback inconnu: $ROLLBACK_TYPE"
+              exit 1
+              ;;
+          esac
+
+          echo "Image cible: $TARGET_TAG"
+          echo "image_tag=$TARGET_TAG" >> $GITHUB_OUTPUT
+
+      # 5. Affichage du resume
+      - name: Resume du rollback
+        run: |
+          echo "=== RESUME DU ROLLBACK ==="
+          echo "Type: ${{ inputs.rollback_type }}"
+          echo "Image actuelle: ${{ steps.get-current.outputs.image_tag }}"
+          echo "Image cible: ${{ steps.determine-target.outputs.image_tag }}"
+          echo "URL: ${{ steps.get-url.outputs.app_url }}"
+          echo "=========================="
+
+  # ==========================================================================
+  # Job 2: Execution du rollback
+  # ==========================================================================
+  execute-rollback:
+    name: Execution du Rollback
+    runs-on: ubuntu-latest
+    needs: prepare-rollback
+    environment: production
+
+    steps:
+      # 1. Connexion a Azure
+      - name: Connexion a Azure
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      # 2. Sauvegarde de l etat actuel
+      - name: Sauvegarde de l etat actuel
+        run: |
+          # Cree un artefact avec l'image actuelle pour pouvoir annuler
+          echo "${{ needs.prepare-rollback.outputs.image_tag_actuel }}" > previous_image.txt
+          echo "Etat actuel sauvegarde: ${{ needs.prepare-rollback.outputs.image_tag_actuel }}"
+
+      # 3. Upload de la sauvegarde comme artefact
+      - name: Upload sauvegarde
+        uses: actions/upload-artifact@v4
+        with:
+          name: rollback-backup-${{ github.run_number }}
+          path: previous_image.txt
+          retention-days: 30
+
+      # 4. Execution du rollback
+      - name: Executer le rollback
+        run: |
+          echo "Demarrage du rollback vers: ${{ needs.prepare-rollback.outputs.image_tag_cible }}"
+
+          az containerapp update \
+            --name $CONTAINER_APP \
+            --resource-group $RESOURCE_GROUP \
+            --image $AZURE_CONTAINER_REGISTRY/$IMAGE_NAME:${{ needs.prepare-rollback.outputs.image_tag_cible }}
+
+          echo "Container App mis a jour avec l'image: ${{ needs.prepare-rollback.outputs.image_tag_cible }}"
+
+      # 5. Attente du deploiement
+      - name: Attente du deploiement
+        run: |
+          echo "Attente de 30 secondes pour le deploiement..."
+          sleep 30
+
+  # ==========================================================================
+  # Job 3: Verification de sante
+  # ==========================================================================
+  verify-health:
+    name: Verification de Sante
+    runs-on: ubuntu-latest
+    needs: [prepare-rollback, execute-rollback]
+    if: ${{ inputs.skip_health_check != true }}
+
+    steps:
+      # 1. Verification du health check
+      - name: Verification du health check
+        id: health-check
+        run: |
+          APP_URL="${{ needs.prepare-rollback.outputs.app_url }}"
+          HEALTH_URL="$APP_URL$HEALTH_ENDPOINT"
+
+          echo "URL de health check: $HEALTH_URL"
+
+          # Boucle de verification avec retries
+          for i in $(seq 1 $MAX_HEALTH_RETRIES); do
+            echo "Tentative $i/$MAX_HEALTH_RETRIES..."
+
+            HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "$HEALTH_URL" --max-time 10 2>/dev/null || echo "000")
+
+            if [ "$HTTP_CODE" = "200" ]; then
+              echo "Application en bonne sante (HTTP $HTTP_CODE)"
+              echo "status=success" >> $GITHUB_OUTPUT
+              exit 0
+            fi
+
+            echo "Health check echoue (HTTP $HTTP_CODE), attente de ${HEALTH_RETRY_INTERVAL}s..."
+            sleep $HEALTH_RETRY_INTERVAL
+          done
+
+          echo "::error::L'application ne repond pas apres $MAX_HEALTH_RETRIES tentatives"
+          echo "status=failure" >> $GITHUB_OUTPUT
+          exit 1
+
+      # 2. Resume du resultat
+      - name: Resume du health check
+        if: always()
+        run: |
+          if [ "${{ steps.health-check.outputs.status }}" = "success" ]; then
+            echo "=== ROLLBACK REUSSI ==="
+            echo "L'application est en bonne sante sur la version: ${{ needs.prepare-rollback.outputs.image_tag_cible }}"
+          else
+            echo "=== ROLLBACK ECHOUE ==="
+            echo "L'application ne repond pas correctement."
+            echo "Considerez annuler le rollback avec l'artefact de sauvegarde."
+          fi
+
+  # ==========================================================================
+  # Job 4: Notification (optionnel)
+  # ==========================================================================
+  notify:
+    name: Notification
+    runs-on: ubuntu-latest
+    needs: [prepare-rollback, execute-rollback, verify-health]
+    if: always()
+
+    steps:
+      - name: Notification du resultat
+        run: |
+          if [ "${{ needs.verify-health.result }}" = "success" ] || [ "${{ inputs.skip_health_check }}" = "true" ]; then
+            echo "::notice title=Rollback Reussi::L'application a ete restauree vers ${{ needs.prepare-rollback.outputs.image_tag_cible }}"
+          else
+            echo "::warning title=Rollback Echoue::Le health check a echoue apres le rollback vers ${{ needs.prepare-rollback.outputs.image_tag_cible }}"
+          fi
+
+      # Note: Ajouter ici des notifications Slack, Teams, ou email si necessaire
+      # - name: Notification Slack
+      #   uses: slackapi/slack-github-action@v1
+      #   with:
+      #     webhook: ${{ secrets.SLACK_WEBHOOK }}
+      #     message: "Rollback effectue..."

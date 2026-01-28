@@ -42,7 +42,7 @@ Exemple de requête PromQL pour Grafana:
 - Taux d'erreur: rate(llm_errors_total[5m])
 """
 
-from prometheus_client import Counter, Histogram, Gauge, Summary
+from prometheus_client import Counter, Histogram, Gauge, Summary, REGISTRY
 import time
 
 
@@ -118,6 +118,77 @@ vector_results_count = Histogram(
     buckets=[0, 1, 5, 10, 20, 50]
 )
 
+# === MÉTRIQUES ADDITIONNELLES POUR DASHBOARD AVANCÉ (compatibles Azure Monitor/Grafana) ===
+
+# Compteur du nombre total d'opérations (toutes requêtes confondues) avec label agent
+# (Grafana attend total_operations et total_operations{agent="..."})
+total_operations = Counter(
+    "total_operations",
+    "Nombre total d'opérations exécutées par l'agent",
+    ["agent"],
+    registry=REGISTRY
+)
+
+# Compteur du nombre total d'opérations (toutes requêtes confondues) avec label agent
+# (Grafana attend total_operations2 et total_operations2{agent="..."})
+total_operations2 = Counter(
+    "total_operations2",
+    "Nombre total d'opérations exécutées par l'agent (debug)",
+    ["agent"],
+    registry=REGISTRY
+)
+
+# Compteur des tokens d'entrée et de sortie (pour compatibilité dashboard Azure) avec label agent
+input_tokens_total = Counter(
+    "input_tokens_total",
+    "Total des tokens d'entrée consommés",
+    ["agent"]
+)
+output_tokens_total = Counter(
+    "output_tokens_total",
+    "Total des tokens de sortie générés",
+    ["agent"]
+)
+
+# Histogramme du temps de réponse (pour P95/P99/avg)
+response_time_seconds = Histogram(
+    "response_time_seconds",
+    "Temps de réponse de l'agent en secondes",
+    buckets=[0.1, 0.5, 1, 2, 5, 10, 30]
+)
+
+# Compteur de succès/erreur global (pour taux de succès)
+success_total = Counter(
+    "success_total",
+    "Nombre de requêtes réussies"
+)
+error_total = Counter(
+    "error_total",
+    "Nombre de requêtes en erreur par type",
+    ["error_type"]
+)
+# Pour compatibilité avec les panels sans label
+error_total_global = Counter(
+    "error_total_global",
+    "Nombre total de requêtes en erreur (tous types confondus)"
+)
+
+# Coût estimé en dollars (pour panel coût)
+cost_dollars_total = Counter(
+    "cost_dollars_total",
+    "Coût estimé total en dollars"
+)
+
+def get_agent_label(user_profile):
+    """
+    Récupère le nom de l'agent à partir du profil utilisateur ou retourne 'default'.
+    """
+    if isinstance(user_profile, dict):
+        agent = user_profile.get("agent") or user_profile.get("user_genre")
+        if agent:
+            return str(agent)
+    return "default"
+
 
 class LLMMetricsCollector:
     """
@@ -148,10 +219,18 @@ class LLMMetricsCollector:
         if self.start_time:
             latency = time.time() - self.start_time
             llm_request_latency.observe(latency)
+            response_time_seconds.observe(latency)  # Ajout pour dashboard avancé
             self.start_time = None
 
         status = "success" if success else "error"
         prediction_requests_total.labels(status=status).inc()
+        total_operations.labels(agent="default").inc()  # Compte toutes les opérations
+
+        if success:
+            success_total.inc()
+        else:
+            error_total.labels(error_type="unknown").inc()
+            error_total_global.inc()
 
     def record_tokens(self, prompt_tokens, completion_tokens):
         """
@@ -170,6 +249,7 @@ class LLMMetricsCollector:
             (completion_tokens / 1000) * self.PRICE_PER_1K_COMPLETION_TOKENS
         )
         estimated_cost.observe(cost)
+        cost_dollars_total.inc(cost)  # Ajout pour dashboard avancé
 
     def record_similarity(self, avg_similarity):
         """
@@ -203,5 +283,64 @@ class LLMMetricsCollector:
         vector_results_count.observe(results_count)
 
 
-# Instance globale du collecteur
+def force_all_metrics():
+    """
+    Force l'existence de toutes les metriques pour tous les labels attendus.
+
+    Cette fonction initialise toutes les metriques Prometheus avec une valeur de 0
+    pour garantir leur visibilite dans Grafana des le demarrage de l'application,
+    meme si aucune requete n'a encore ete traitee.
+
+    Metriques initialisees:
+    - total_operations (par agent)
+    - input_tokens_total / output_tokens_total (par agent)
+    - prediction_requests_total (par status)
+    - error_total (par error_type)
+    - llm_errors_total (par error_type)
+    - vector_searches_total (par status)
+    - success_total, error_total_global, cost_dollars_total
+    """
+    # Liste des agents possibles (inclut debug utilise dans main.py)
+    agents = ["default", "homme", "femme", "Homme", "Femme", "debug"]
+
+    # Initialisation des metriques par agent
+    for agent in agents:
+        total_operations.labels(agent=agent).inc(0)
+        total_operations2.labels(agent=agent).inc(0)
+        input_tokens_total.labels(agent=agent).inc(0)
+        output_tokens_total.labels(agent=agent).inc(0)
+
+    # Initialisation des metriques de prediction par status
+    prediction_requests_total.labels(status="success").inc(0)
+    prediction_requests_total.labels(status="error").inc(0)
+
+    # Initialisation des metriques d'erreur par type
+    error_types = ["none", "unknown", "timeout", "rate_limit", "api_error", "predict_error", "connection_error"]
+    for error_type in error_types:
+        error_total.labels(error_type=error_type).inc(0)
+        llm_errors_total.labels(error_type=error_type).inc(0)
+
+    # Initialisation des metriques de recherche vectorielle par status
+    vector_searches_total.labels(status="success").inc(0)
+    vector_searches_total.labels(status="error").inc(0)
+
+    # Initialisation des metriques de tokens par type
+    tokens_consumed.labels(type="prompt").inc(0)
+    tokens_consumed.labels(type="completion").inc(0)
+
+    # Initialisation des compteurs globaux
+    success_total.inc(0)
+    error_total_global.inc(0)
+    cost_dollars_total.inc(0)
+
+    # Initialisation du score de similarite avec une valeur par defaut
+    similarity_score.set(0)
+
+
+# === Instance globale du collecteur pour import direct ===
 metrics_collector = LLMMetricsCollector()
+
+# === Initialisation automatique des metriques au chargement du module ===
+# Cela garantit que toutes les metriques sont visibles dans Grafana
+# des le demarrage de l'application
+force_all_metrics()
