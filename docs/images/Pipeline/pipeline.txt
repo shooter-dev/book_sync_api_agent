@@ -1,0 +1,45 @@
+ C'est fait. Voici le nouveau pipeline :
+
+  1. Checkout code (avec fetch-depth: 0 pour l'historique)
+  2. Scan secrets avec gitleaks  <-- NOUVEAU
+  3. Setup Python 3.13
+  4. Install dependencies
+  5. Linting flake8
+  6. Tests pytest
+  7. Upload coverage
+
+  ---
+  Comment verifier que ca fonctionne
+
+  1. Verifier la syntaxe du workflow (local)
+
+  # Installe actionlint si pas deja fait
+  brew install actionlint
+
+  # Verifie la syntaxe
+  actionlint .github/workflows/deploy.yml
+
+  2. Pousser et observer sur GitHub
+
+  git add .github/workflows/deploy.yml
+  git commit -m "Ajout scan secrets gitleaks dans CI/CD"
+  git push origin main
+
+  Ensuite va sur GitHub > onglet Actions > tu verras le workflow s'executer avec l'etape "Scan secrets avec gitleaks".
+
+  3. Verifier que gitleaks fonctionne (test volontaire)
+
+  Pour tester que gitleaks bloque bien, tu peux creer une branche de test :
+
+  git checkout -b test-gitleaks
+  echo "API_KEY=sk-1234567890abcdef" > test_secret.txt
+  git add test_secret.txt
+  git commit -m "test gitleaks"
+  git push origin test-gitleaks
+
+  Puis cree une PR vers main : le workflow doit echouer a l'etape gitleaks.
+
+  Apres le test, supprime la branche :
+  git checkout main
+  git branch -D test-gitleaks
+  git push origin --delete test-gitleaks
