@@ -13,7 +13,6 @@ on:
       - '.gitignore'
       - 'Makefile'
       - 'pytest.ini'
-
 env:
   AZURE_CONTAINER_REGISTRY: booksyncrepo.azurecr.io
   IMAGE_NAME: api-booksync
