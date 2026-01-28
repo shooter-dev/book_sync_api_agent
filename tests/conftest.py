@@ -89,6 +89,8 @@ def mock_synthesizer():
     """Mock du Synthesizer pour les tests."""
     with patch("app.services.predict_service.Synthesizer") as mock:
         mock_instance = MagicMock()
-        mock_instance.generate_global_response.return_value = "Réponse test générée"
+        mock_instance.generate_global_response_with_metrics.return_value = (
+            "Réponse test générée", 100, 60, 0.85
+        )
         mock.return_value = mock_instance
         yield mock_instance
