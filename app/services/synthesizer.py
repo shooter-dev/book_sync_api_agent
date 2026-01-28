@@ -109,3 +109,16 @@ Only return the response text, without JSON or additional structure.
         except Exception as e:
             logging.error(f"Erreur lors de la génération de la réponse globale: {e}")
             return f"Voici mes recommandations basées sur votre profil {user_profile.get('user_genre')} de {user_profile.get('user_age')} ans avec des préférences pour le {user_profile.get('category_preference')}."
+
+    def generate_global_response_with_metrics(self, recommended_series: List, user_profile: dict):
+        """
+        Génère une réponse globale personnalisée et retourne aussi les métriques nécessaires pour Prometheus.
+        Retourne : (réponse, prompt_tokens, completion_tokens, avg_similarity)
+        """
+        response_text = self.generate_global_response(recommended_series, user_profile)
+        # MOCK: Extraction des tokens (à remplacer par le vrai calcul si possible)
+        prompt_tokens = 100  # valeur fictive
+        completion_tokens = 60  # valeur fictive
+        # MOCK: Calcul de la similarité moyenne (à remplacer par le vrai calcul si possible)
+        avg_similarity = 0.85 if recommended_series else None
+        return response_text, prompt_tokens, completion_tokens, avg_similarity

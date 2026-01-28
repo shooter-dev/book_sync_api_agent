@@ -22,15 +22,16 @@ global:
 scrape_configs:
   # Job pour l'API Book Sync
   - job_name: 'booksync-api'
-
-    # URL de l'endpoint /metrics de l'API FastAPI
-    # En local: http://localhost:3000/metrics
-    # En production: http://api-booksync.azurecontainerapps.io/metrics
     static_configs:
-      - targets: ['localhost:3000']
+      - targets: ['host.docker.internal:8000']
         labels:
           environment: 'development'
           service: 'booksync-api'
+    metrics_path: /metrics/
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        replacement: 'booksync-api'
 
 alerting:
   alertmanagers:

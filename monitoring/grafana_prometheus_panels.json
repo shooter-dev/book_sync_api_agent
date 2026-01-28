@@ -1,0 +1,609 @@
+{
+  "__inputs": [
+    {
+      "name": "DS_PROMETHEUS",
+      "label": "Prometheus",
+      "description": "Source de donnees Prometheus",
+      "type": "datasource",
+      "pluginId": "prometheus",
+      "pluginName": "Prometheus"
+    }
+  ],
+  "__requires": [
+    { "type": "grafana", "id": "grafana", "name": "Grafana", "version": "10.0.0" },
+    { "type": "datasource", "id": "prometheus", "name": "Prometheus", "version": "1.0.0" }
+  ],
+  "annotations": { "list": [] },
+  "description": "Dashboard LLMOps pour BookSync API - Monitoring des performances, tokens, couts et erreurs des agents IA",
+  "editable": true,
+  "gnetId": null,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
+      "id": 100,
+      "title": "Statistiques Globales",
+      "type": "row"
+    },
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "Total Operations",
+      "description": "Nombre total d'operations executees par tous les agents",
+      "datasource": "${DS_PROMETHEUS}",
+      "targets": [{ "expr": "sum(total_operations_total)", "refId": "A", "legendFormat": "Operations" }],
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "fixed", "fixedColor": "blue" },
+          "mappings": [],
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "blue", "value": null }] },
+          "unit": "short"
+        }
+      },
+      "options": { "colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "textMode": "auto" },
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 1 }
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Total Input Tokens",
+      "description": "Tokens d'entree consommes (prompt)",
+      "datasource": "${DS_PROMETHEUS}",
+      "targets": [{ "expr": "sum(input_tokens_total)", "refId": "A", "legendFormat": "Input Tokens" }],
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "fixed", "fixedColor": "purple" },
+          "mappings": [],
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "purple", "value": null }] },
+          "unit": "short"
+        }
+      },
+      "options": { "colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "textMode": "auto" },
+      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 1 }
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Total Output Tokens",
+      "description": "Tokens de sortie generes (completion)",
+      "datasource": "${DS_PROMETHEUS}",
+      "targets": [{ "expr": "sum(output_tokens_total)", "refId": "A", "legendFormat": "Output Tokens" }],
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "fixed", "fixedColor": "green" },
+          "mappings": [],
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] },
+          "unit": "short"
+        }
+      },
+      "options": { "colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "textMode": "auto" },
+      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 1 }
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "Temps de Reponse Moyen",
+      "description": "Temps de reponse moyen des agents en secondes",
+      "datasource": "${DS_PROMETHEUS}",
+      "targets": [{ "expr": "rate(response_time_seconds_sum[5m]) / rate(response_time_seconds_count[5m])", "refId": "A", "legendFormat": "Avg Response Time" }],
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "fixed", "fixedColor": "orange" },
+          "mappings": [],
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "yellow", "value": 2 }, { "color": "red", "value": 5 }] },
+          "unit": "s",
+          "decimals": 2
+        }
+      },
+      "options": { "colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "textMode": "auto" },
+      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 1 }
+    },
+
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 5 },
+      "id": 101,
+      "title": "Performance Monitoring",
+      "type": "row"
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "Tendances Temps de Reponse Agent",
+      "description": "Evolution du temps de reponse: moyenne, P95 et P99",
+      "datasource": "${DS_PROMETHEUS}",
+      "targets": [
+        { "expr": "rate(response_time_seconds_sum[5m]) / rate(response_time_seconds_count[5m])", "refId": "A", "legendFormat": "Moyenne" },
+        { "expr": "histogram_quantile(0.95, sum(rate(response_time_seconds_bucket[5m])) by (le))", "refId": "B", "legendFormat": "P95" },
+        { "expr": "histogram_quantile(0.99, sum(rate(response_time_seconds_bucket[5m])) by (le))", "refId": "C", "legendFormat": "P99" }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": { "lineWidth": 2, "fillOpacity": 10, "spanNulls": false, "showPoints": "auto", "pointSize": 5 },
+          "unit": "s"
+        },
+        "overrides": [
+          { "matcher": { "id": "byName", "options": "Moyenne" }, "properties": [{ "id": "color", "value": { "fixedColor": "blue", "mode": "fixed" } }] },
+          { "matcher": { "id": "byName", "options": "P95" }, "properties": [{ "id": "color", "value": { "fixedColor": "yellow", "mode": "fixed" } }] },
+          { "matcher": { "id": "byName", "options": "P99" }, "properties": [{ "id": "color", "value": { "fixedColor": "red", "mode": "fixed" } }] }
+        ]
+      },
+      "options": { "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "multi", "sort": "desc" } },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 6 }
+    },
+    {
+      "id": 6,
+      "type": "gauge",
+      "title": "Taux de Succes (%)",
+      "description": "Pourcentage de requetes reussies",
+      "datasource": "${DS_PROMETHEUS}",
+      "targets": [{ "expr": "(success_total / (success_total + error_total_global_total)) * 100", "refId": "A" }],
+      "fieldConfig": {
+        "defaults": {
+          "min": 0,
+          "max": 100,
+          "unit": "percent",
+          "decimals": 1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "yellow", "value": 90 },
+              { "color": "green", "value": 95 }
+            ]
+          }
+        }
+      },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "showThresholdLabels": false, "showThresholdMarkers": true },
+      "gridPos": { "h": 8, "w": 6, "x": 12, "y": 6 }
+    },
+    {
+      "id": 7,
+      "type": "timeseries",
+      "title": "Debit (Operations/min)",
+      "description": "Nombre d'operations par minute",
+      "datasource": "${DS_PROMETHEUS}",
+      "targets": [{ "expr": "sum(rate(total_operations_total[1m])) * 60", "refId": "A", "legendFormat": "Operations/min" }],
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "fixed", "fixedColor": "blue" },
+          "custom": { "lineWidth": 2, "fillOpacity": 30, "drawStyle": "bars", "barAlignment": 0 },
+          "unit": "short"
+        }
+      },
+      "options": { "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "single", "sort": "none" } },
+      "gridPos": { "h": 8, "w": 6, "x": 18, "y": 6 }
+    },
+
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 14 },
+      "id": 102,
+      "title": "Token Usage & Cost Analysis",
+      "type": "row"
+    },
+    {
+      "id": 8,
+      "type": "timeseries",
+      "title": "Consommation de Tokens dans le Temps",
+      "description": "Evolution de la consommation de tokens d'entree et de sortie",
+      "datasource": "${DS_PROMETHEUS}",
+      "targets": [
+        { "expr": "sum(rate(input_tokens_total[5m])) * 60", "refId": "A", "legendFormat": "Input Tokens/min" },
+        { "expr": "sum(rate(output_tokens_total[5m])) * 60", "refId": "B", "legendFormat": "Output Tokens/min" }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": { "lineWidth": 2, "fillOpacity": 30, "stacking": { "mode": "normal", "group": "A" } },
+          "unit": "short"
+        },
+        "overrides": [
+          { "matcher": { "id": "byName", "options": "Input Tokens/min" }, "properties": [{ "id": "color", "value": { "fixedColor": "purple", "mode": "fixed" } }] },
+          { "matcher": { "id": "byName", "options": "Output Tokens/min" }, "properties": [{ "id": "color", "value": { "fixedColor": "green", "mode": "fixed" } }] }
+        ]
+      },
+      "options": { "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "multi", "sort": "desc" } },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 15 }
+    },
+    {
+      "id": 9,
+      "type": "piechart",
+      "title": "Utilisation Tokens par Agent",
+      "description": "Repartition des tokens par agent",
+      "datasource": "${DS_PROMETHEUS}",
+      "targets": [{ "expr": "sum(input_tokens_total + output_tokens_total) by (agent)", "refId": "A", "legendFormat": "{{agent}}" }],
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "unit": "short"
+        }
+      },
+      "options": { "legend": { "displayMode": "list", "placement": "right", "showLegend": true }, "pieType": "donut", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "tooltip": { "mode": "single", "sort": "none" } },
+      "gridPos": { "h": 8, "w": 6, "x": 12, "y": 15 }
+    },
+    {
+      "id": 10,
+      "type": "timeseries",
+      "title": "Estimation Cout Journalier ($)",
+      "description": "Cout estime base sur les tarifs GPT-4o-mini: $0.15/1M input, $0.60/1M output",
+      "datasource": "${DS_PROMETHEUS}",
+      "targets": [{ "expr": "increase(cost_dollars_total[1d])", "refId": "A", "legendFormat": "Cout journalier ($)" }],
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "fixed", "fixedColor": "yellow" },
+          "custom": { "lineWidth": 2, "fillOpacity": 30, "drawStyle": "bars" },
+          "unit": "currencyUSD",
+          "decimals": 4
+        }
+      },
+      "options": { "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "single", "sort": "none" } },
+      "gridPos": { "h": 8, "w": 6, "x": 18, "y": 15 }
+    },
+    {
+      "id": 11,
+      "type": "stat",
+      "title": "Cout Total Cumule ($)",
+      "description": "Cout total cumule depuis le demarrage",
+      "datasource": "${DS_PROMETHEUS}",
+      "targets": [{ "expr": "sum(cost_dollars_total)", "refId": "A", "legendFormat": "Total" }],
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "yellow", "value": 1 }, { "color": "red", "value": 10 }] },
+          "unit": "currencyUSD",
+          "decimals": 4
+        }
+      },
+      "options": { "colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "textMode": "auto" },
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 23 }
+    },
+
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 27 },
+      "id": 103,
+      "title": "Agent Activity",
+      "type": "row"
+    },
+    {
+      "id": 12,
+      "type": "table",
+      "title": "Resume Performance par Agent",
+      "description": "Tableau recapitulatif des performances par agent",
+      "datasource": "${DS_PROMETHEUS}",
+      "targets": [
+        { "expr": "sum(total_operations_total) by (agent)", "refId": "A", "legendFormat": "{{agent}}", "format": "table", "instant": true }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": { "align": "auto", "displayMode": "auto" }
+        },
+        "overrides": [
+          { "matcher": { "id": "byName", "options": "agent" }, "properties": [{ "id": "displayName", "value": "Agent" }] },
+          { "matcher": { "id": "byName", "options": "Value" }, "properties": [{ "id": "displayName", "value": "Total Operations" }] }
+        ]
+      },
+      "options": { "showHeader": true, "cellHeight": "sm", "footer": { "show": false, "reducer": ["sum"], "fields": "" } },
+      "transformations": [{ "id": "organize", "options": { "excludeByName": { "Time": true }, "indexByName": {}, "renameByName": {} } }],
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 28 }
+    },
+    {
+      "id": 13,
+      "type": "timeseries",
+      "title": "Operations par Agent dans le Temps",
+      "description": "Evolution des operations par agent",
+      "datasource": "${DS_PROMETHEUS}",
+      "targets": [{ "expr": "sum(rate(total_operations_total[5m])) by (agent) * 60", "refId": "A", "legendFormat": "{{agent}}" }],
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": { "lineWidth": 2, "fillOpacity": 20, "stacking": { "mode": "normal", "group": "A" } },
+          "unit": "short"
+        }
+      },
+      "options": { "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "multi", "sort": "desc" } },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 28 }
+    },
+
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 36 },
+      "id": 104,
+      "title": "Error Analysis",
+      "type": "row"
+    },
+    {
+      "id": 14,
+      "type": "gauge",
+      "title": "Taux d'Erreur (%)",
+      "description": "Pourcentage de requetes en erreur",
+      "datasource": "${DS_PROMETHEUS}",
+      "targets": [{ "expr": "(error_total_global_total / (success_total + error_total_global_total)) * 100", "refId": "A" }],
+      "fieldConfig": {
+        "defaults": {
+          "min": 0,
+          "max": 100,
+          "unit": "percent",
+          "decimals": 1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 5 },
+              { "color": "red", "value": 10 }
+            ]
+          }
+        }
+      },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "showThresholdLabels": false, "showThresholdMarkers": true },
+      "gridPos": { "h": 8, "w": 6, "x": 0, "y": 37 }
+    },
+    {
+      "id": 15,
+      "type": "timeseries",
+      "title": "Chronologie des Erreurs",
+      "description": "Evolution du nombre d'erreurs dans le temps",
+      "datasource": "${DS_PROMETHEUS}",
+      "targets": [{ "expr": "sum(rate(error_total[5m])) by (error_type) * 60", "refId": "A", "legendFormat": "{{error_type}}" }],
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": { "lineWidth": 2, "fillOpacity": 30 },
+          "unit": "short"
+        }
+      },
+      "options": { "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "multi", "sort": "desc" } },
+      "gridPos": { "h": 8, "w": 9, "x": 6, "y": 37 }
+    },
+    {
+      "id": 16,
+      "type": "piechart",
+      "title": "Erreurs par Type",
+      "description": "Repartition des erreurs par type",
+      "datasource": "${DS_PROMETHEUS}",
+      "targets": [{ "expr": "sum(error_total) by (error_type)", "refId": "A", "legendFormat": "{{error_type}}" }],
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "unit": "short"
+        }
+      },
+      "options": { "legend": { "displayMode": "list", "placement": "right", "showLegend": true }, "pieType": "pie", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "tooltip": { "mode": "single", "sort": "none" } },
+      "gridPos": { "h": 8, "w": 9, "x": 15, "y": 37 }
+    },
+    {
+      "id": 17,
+      "type": "stat",
+      "title": "Total Erreurs",
+      "description": "Nombre total d'erreurs",
+      "datasource": "${DS_PROMETHEUS}",
+      "targets": [{ "expr": "sum(error_total_global_total)", "refId": "A", "legendFormat": "Erreurs" }],
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "yellow", "value": 10 }, { "color": "red", "value": 50 }] },
+          "unit": "short"
+        }
+      },
+      "options": { "colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "textMode": "auto" },
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 45 }
+    },
+
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 49 },
+      "id": 105,
+      "title": "Vector Search & Quality",
+      "type": "row"
+    },
+    {
+      "id": 18,
+      "type": "gauge",
+      "title": "Score de Similarite",
+      "description": "Score de similarite moyen des resultats vectoriels (0-1)",
+      "datasource": "${DS_PROMETHEUS}",
+      "targets": [{ "expr": "vector_similarity_score", "refId": "A" }],
+      "fieldConfig": {
+        "defaults": {
+          "min": 0,
+          "max": 1,
+          "unit": "percentunit",
+          "decimals": 2,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "yellow", "value": 0.5 },
+              { "color": "green", "value": 0.7 }
+            ]
+          }
+        }
+      },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "showThresholdLabels": false, "showThresholdMarkers": true },
+      "gridPos": { "h": 8, "w": 6, "x": 0, "y": 50 }
+    },
+    {
+      "id": 19,
+      "type": "stat",
+      "title": "Recherches Vectorielles Reussies",
+      "description": "Nombre de recherches vectorielles reussies",
+      "datasource": "${DS_PROMETHEUS}",
+      "targets": [{ "expr": "sum(vector_searches_total{status=\"success\"})", "refId": "A", "legendFormat": "Succes" }],
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "fixed", "fixedColor": "green" },
+          "unit": "short"
+        }
+      },
+      "options": { "colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "textMode": "auto" },
+      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 50 }
+    },
+    {
+      "id": 20,
+      "type": "stat",
+      "title": "Recherches Vectorielles Echouees",
+      "description": "Nombre de recherches vectorielles echouees",
+      "datasource": "${DS_PROMETHEUS}",
+      "targets": [{ "expr": "sum(vector_searches_total{status=\"error\"})", "refId": "A", "legendFormat": "Erreurs" }],
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "fixed", "fixedColor": "red" },
+          "unit": "short"
+        }
+      },
+      "options": { "colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "textMode": "auto" },
+      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 54 }
+    },
+    {
+      "id": 21,
+      "type": "timeseries",
+      "title": "Distribution Resultats par Recherche",
+      "description": "Histogramme du nombre de resultats retournes par recherche vectorielle",
+      "datasource": "${DS_PROMETHEUS}",
+      "targets": [{ "expr": "histogram_quantile(0.5, sum(rate(vector_results_count_bucket[5m])) by (le))", "refId": "A", "legendFormat": "Median resultats" }],
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "fixed", "fixedColor": "blue" },
+          "custom": { "lineWidth": 2, "fillOpacity": 20 },
+          "unit": "short"
+        }
+      },
+      "options": { "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "single", "sort": "none" } },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 50 }
+    },
+
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 58 },
+      "id": 106,
+      "title": "LLM Detailed Metrics",
+      "type": "row"
+    },
+    {
+      "id": 22,
+      "type": "timeseries",
+      "title": "Latence LLM (Histogramme)",
+      "description": "Distribution des latences des appels LLM",
+      "datasource": "${DS_PROMETHEUS}",
+      "targets": [
+        { "expr": "histogram_quantile(0.5, sum(rate(llm_request_latency_seconds_bucket[5m])) by (le))", "refId": "A", "legendFormat": "P50" },
+        { "expr": "histogram_quantile(0.95, sum(rate(llm_request_latency_seconds_bucket[5m])) by (le))", "refId": "B", "legendFormat": "P95" },
+        { "expr": "histogram_quantile(0.99, sum(rate(llm_request_latency_seconds_bucket[5m])) by (le))", "refId": "C", "legendFormat": "P99" }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": { "lineWidth": 2, "fillOpacity": 10 },
+          "unit": "s"
+        }
+      },
+      "options": { "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "multi", "sort": "desc" } },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 59 }
+    },
+    {
+      "id": 23,
+      "type": "timeseries",
+      "title": "Tokens LLM Consommes",
+      "description": "Tokens consommes par type (prompt/completion)",
+      "datasource": "${DS_PROMETHEUS}",
+      "targets": [
+        { "expr": "sum(rate(llm_tokens_consumed_total{type=\"prompt\"}[5m])) * 60", "refId": "A", "legendFormat": "Prompt tokens/min" },
+        { "expr": "sum(rate(llm_tokens_consumed_total{type=\"completion\"}[5m])) * 60", "refId": "B", "legendFormat": "Completion tokens/min" }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": { "lineWidth": 2, "fillOpacity": 20, "stacking": { "mode": "normal", "group": "A" } },
+          "unit": "short"
+        }
+      },
+      "options": { "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "multi", "sort": "desc" } },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 59 }
+    },
+    {
+      "id": 24,
+      "type": "stat",
+      "title": "Requetes Prediction Total",
+      "description": "Nombre total de requetes de prediction",
+      "datasource": "${DS_PROMETHEUS}",
+      "targets": [{ "expr": "sum(prediction_requests_total)", "refId": "A" }],
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "fixed", "fixedColor": "blue" },
+          "unit": "short"
+        }
+      },
+      "options": { "colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "textMode": "auto" },
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 67 }
+    },
+    {
+      "id": 25,
+      "type": "stat",
+      "title": "Requetes Reussies",
+      "description": "Nombre de requetes de prediction reussies",
+      "datasource": "${DS_PROMETHEUS}",
+      "targets": [{ "expr": "sum(prediction_requests_total{status=\"success\"})", "refId": "A" }],
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "fixed", "fixedColor": "green" },
+          "unit": "short"
+        }
+      },
+      "options": { "colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "textMode": "auto" },
+      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 67 }
+    },
+    {
+      "id": 26,
+      "type": "stat",
+      "title": "Requetes Echouees",
+      "description": "Nombre de requetes de prediction echouees",
+      "datasource": "${DS_PROMETHEUS}",
+      "targets": [{ "expr": "sum(prediction_requests_total{status=\"error\"})", "refId": "A" }],
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "fixed", "fixedColor": "red" },
+          "unit": "short"
+        }
+      },
+      "options": { "colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "textMode": "auto" },
+      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 67 }
+    },
+    {
+      "id": 27,
+      "type": "stat",
+      "title": "Erreurs LLM par Type",
+      "description": "Total des erreurs LLM",
+      "datasource": "${DS_PROMETHEUS}",
+      "targets": [{ "expr": "sum(llm_errors_total)", "refId": "A" }],
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "yellow", "value": 5 }, { "color": "red", "value": 20 }] },
+          "unit": "short"
+        }
+      },
+      "options": { "colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto", "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }, "textMode": "auto" },
+      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 67 }
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 38,
+  "style": "dark",
+  "tags": ["llmops", "booksync", "agent-framework", "prometheus"],
+  "templating": { "list": [] },
+  "time": { "from": "now-6h", "to": "now" },
+  "timepicker": {
+    "refresh_intervals": ["5s", "10s", "30s", "1m", "5m", "15m", "30m", "1h", "2h", "1d"],
+    "time_options": ["5m", "15m", "1h", "6h", "12h", "24h", "2d", "7d", "30d"]
+  },
+  "timezone": "browser",
+  "title": "BookSync LLMOps Dashboard",
+  "uid": "booksync-llmops",
+  "version": 1,
+  "weekStart": ""
+}
