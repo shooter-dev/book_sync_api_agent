@@ -239,7 +239,9 @@ class TestPredict:
         mock_vector.return_value = mock_vector_instance
 
         mock_synth_instance = MagicMock()
-        mock_synth_instance.generate_global_response.return_value = "Réponse test"
+        mock_synth_instance.generate_global_response_with_metrics.return_value = (
+            "Réponse test", 100, 60, 0.85
+        )
         mock_synth.return_value = mock_synth_instance
 
         service = PredictService()
