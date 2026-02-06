@@ -215,3 +215,8 @@ cython_debug/
 .cursorignore
 .cursorindexingignore
 
+# Documentation generee (diagrammes et schemas)
+.env.example
+docs/*.png
+docs/*.puml
+

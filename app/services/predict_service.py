@@ -122,8 +122,9 @@ class PredictService:
                 serie_id = row.get("serie_id", "")
                 genre = row.get("genre", "")
                 category = row.get("categorie", "")
+                similarity_score = row.get("similarity", 0.0)
 
-                print(f"Série trouvée: {serie_title} | ID: {serie_id} | Genre: {genre}")
+                print(f"Serie: {serie_title} | Score: {similarity_score:.4f} | Genre: {genre}")
 
                 if serie_title and serie_id:
                     # Générer une réponse IA personnalisée
